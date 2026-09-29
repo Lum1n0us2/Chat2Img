@@ -286,6 +286,36 @@
     .hl-color-dot-picker::-webkit-color-swatch-wrapper { padding: 0; }
     .hl-color-dot-picker::-webkit-color-swatch { border: none; border-radius: 50%; }
 
+    .color-slot-group {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* B 스타일: 브라우저 기본 포커스링/만두 테두리 완전 제거 */
+    .hl-color-dot-picker,
+    .hl-color-dot-picker:focus,
+    .hl-color-dot-picker:focus-visible {
+      -webkit-appearance: none;
+      outline: none !important;
+      border: none !important;
+      box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15) !important;
+      width: 15px !important;
+      height: 15px !important;
+      border-radius: 50% !important;
+      cursor: pointer;
+      background: none;
+      padding: 0;
+      opacity: 0.35; /* 비활성 슬롯은 은은하게 반투명 */
+      transition: opacity 0.15s ease;
+    }
+
+    /* 선택된 활성 슬롯: 100% 선명 + 얇고 단정한 그림자 */
+    .hl-color-dot-picker.active-slot {
+      opacity: 1 !important;
+      box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.22), 0 1px 3px rgba(0, 0, 0, 0.12) !important;
+    }
+
     textarea, input[type="text"] {
       width: 100%;
       padding: 9px 12px;
@@ -1089,13 +1119,32 @@
       color: #fff;
       border: none;
       border-radius: 10px;
-      font-weight: 800;
+      font-weight: 700;
       font-size: 12.5px;
       cursor: pointer;
       white-space: nowrap;
       transition: background 0.15s ease;
     }
     .btn-preset-add:hover { background: #3d98cf; }
+    
+    .btn-preset-import {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 11px;
+      background: #f1f5f9;
+      color: #64748b;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 10px;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: all 0.15s ease;
+    }
+    .btn-preset-import:hover {
+      background: #eef7fc;
+      border-color: #85c8f2;
+      color: #51aae1;
+    }
 
     /* 프리셋 2열 카드 그리드 */
     .preset-grid {
@@ -1108,6 +1157,41 @@
     }
     .preset-grid::-webkit-scrollbar { width: 5px; }
     .preset-grid::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    
+    /* 프리셋 모달 하단: 불러오기 / 내보내기 분리 바 */
+    .preset-file-footer {
+      display: flex;
+      gap: 8px;
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px dashed #e2e8f0;
+    }
+    .btn-preset-footer-action {
+      flex: 1;
+      padding: 9px 0;
+      background: #f8fafc;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 700;
+      color: #475569;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      transition: all 0.15s ease;
+      user-select: none;
+    }
+    .btn-preset-footer-action:hover {
+      background: #eef7fc;
+      border-color: #51aae1;
+      color: #51aae1;
+    }
+    .btn-preset-footer-action:active {
+      transform: scale(0.98);
+    }
 
     .preset-item-card {
       aspect-ratio: 1 / 1;
@@ -1221,6 +1305,42 @@
       color: #94a3b8;
       font-weight: 600;
     }
+    
+    /* 기존 .btn-preset-del 근처에 추가 */
+    .preset-card-actions {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      display: flex;
+      gap: 4px;
+      z-index: 2;
+    }
+    .btn-preset-action {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      color: #94a3b8;
+      font-size: 11px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+      opacity: 0.7;
+    }
+    .btn-preset-action:hover {
+      opacity: 1;
+      border-color: #51aae1;
+      color: #51aae1;
+      background: #f0f7fb;
+    }
+    .btn-preset-action.del:hover {
+      color: #e11d48;
+      border-color: #e11d48;
+      background: #fff1f2;
+    }
 
     @media (max-width: 768px) {
       /* 1. 이동 버튼들은 원래 기본 위치(우하단)로 복원 */
@@ -1323,14 +1443,22 @@
           <button class="fmt-btn" id="fmt-underline" title="밑줄 (토글 가능)" style="text-decoration: underline;">U</button>
           <button class="fmt-btn" id="fmt-strike" title="취소선 (토글 가능)" style="text-decoration: line-through;">S</button>
           
+          <!-- 형광펜 (H) 슬롯 1, 2 -->
           <div class="hl-wrap-simple">
             <button class="fmt-btn-hl" id="fmt-hl-btn" title="형광펜 칠하기 / 지우기">H</button>
-            <input type="color" id="in-hl-color" value="#ffeb3b" class="hl-color-dot-picker" title="형광펜 색상 선택">
+            <div class="color-slot-group">
+              <input type="color" id="in-hl-color-1" value="#ffeb3b" class="hl-color-dot-picker active-slot" title="형광펜 1 (클릭하여 선택/변경)">
+              <input type="color" id="in-hl-color-2" value="#c8c8c8" class="hl-color-dot-picker" title="형광펜 2 (클릭하여 선택/변경)">
+            </div>
           </div>
-            
+
+          <!-- 글자색 (A) 슬롯 1, 2 -->
           <div class="hl-wrap-simple">
             <button class="fmt-btn-hl" id="fmt-tc-btn" title="글자색 입히기 / 지우기" style="background:#ffffff; color:#51aae1; border:1px solid #cbd5e1;">A</button>
-            <input type="color" id="in-tc-color" value="#51aae1" class="hl-color-dot-picker" title="글자색 선택">
+            <div class="color-slot-group">
+              <input type="color" id="in-tc-color-1" value="#51aae1" class="hl-color-dot-picker active-slot" title="글자색 1 (클릭하여 선택/변경)">
+              <input type="color" id="in-tc-color-2" value="#c8c8c8" class="hl-color-dot-picker" title="글자색 2 (클릭하여 선택/변경)">
+            </div>
           </div>
 
           <button class="fmt-btn" id="fmt-quote" title="인용구 추가/제거" style="font-size: 11.5px;">❝ 인용</button>
@@ -1352,7 +1480,9 @@
           
         <!-- 채팅 모드 안내사항 -->
         <div class="chat-guide-tip" id="chat-syntax-guide" style="display:none;">
-          💡 <b>[1]~[6]:</b> 프로필별 채팅 / <b>[-]:</b> 번역 / <b>[s]:</b> 시스템 알림
+          💡 <b>[1]~[6]:</b> 프로필별 채팅 / <b>[-]:</b> 번역 / <b>[s]:</b> 시스템 알림<br>
+          <span style="font-size: 11px; opacity: 0.85;">*내용 뒤에 <b>&lt;[시간]&gt;</b>을 붙이면 타임라인형 시간이 변경됩니다.</span>
+
         </div>
           
       </div>
@@ -1492,10 +1622,24 @@
           <div class="sw-track"></div>
           <span class="toggle-label">제목 설정</span>
         </div>
+
         <div id="title-inputs" style="display:none; flex-direction:column; gap:8px; margin-top:6px;">
           <input type="text" id="in-title" placeholder="제목을 입력해 주세요">
           <input type="text" id="in-subtitle" placeholder="부제를 입력해 주세요 (선택)">
+
+          <span class="label-sub" style="margin-top:4px;">제목 크기</span>
+          <div class="range-row">
+            <input type="range" id="in-title-fs" min="20" max="64" value="36">
+            <span id="title-fs-val">36px</span>
+          </div>
+
+          <span class="label-sub">부제 크기</span>
+          <div class="range-row">
+            <input type="range" id="in-subtitle-fs" min="14" max="42" value="24">
+            <span id="subtitle-fs-val">24px</span>
+          </div>
         </div>
+        
       </div>
 
       <div class="panel-divider"></div>
@@ -1803,10 +1947,34 @@
         <input type="text" id="in-preset-name" placeholder="프리셋 이름 (예: 퓨윳)" maxlength="16">
         <button type="button" class="btn-preset-add" id="btn-save-preset">프리셋 저장</button>
       </div>
+    
 
       <div class="preset-grid" id="preset-grid">
         <!-- JS로 동적 생성되는 2열 프리셋 카드 -->
       </div>
+      
+      <!-- 프리셋 모달 하단: 불러오기 / 내보내기 분리 바 (SVG 적용) -->
+      <div class="preset-file-footer">
+        <label class="btn-preset-footer-action" for="in-import-file">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+          <span>프리셋 불러오기</span>
+          <input type="file" id="in-import-file" accept=".json,application/json" style="display:none;">
+        </label>
+        
+        <button type="button" class="btn-preset-footer-action" id="btn-export-current">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="17 8 12 3 7 8"></polyline>
+            <line x1="12" y1="3" x2="12" y2="15"></line>
+          </svg>
+          <span>현재 세팅 내보내기</span>
+        </button>
+      </div>
+      
     </div>
   </div>
 
@@ -1825,6 +1993,19 @@
     // 시스템 컬러 이모지까지 포함하는 폰트 폴백 헬퍼
     function getFontFamily(fontName) {
       return `"${fontName}", "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif`;
+    }
+    
+    // <[시간]> 디코 시간 파싱용임
+    function extractCustomTime(rawText) {
+      if (!rawText) return { text: '', time: '오늘' };
+      const match = rawText.match(/\s*<\[(.*?)\]>\s*$/);
+      if (match) {
+        return {
+          text: rawText.replace(/\s*<\[(.*?)\]>\s*$/, '').trim(),
+          time: match[1].trim() || '오늘'
+        };
+      }
+      return { text: rawText, time: '오늘' };
     }
     
     const canvas = document.getElementById('card-canvas');
@@ -1856,10 +2037,16 @@
     const state = {
       mode: 'normal',
       chatTheme: 'kakao', // 'kakao' | 'discord' | 'terminal'
+      
       text: document.getElementById('in-text').value,
-      hlColor: '#ffeb3b',    // ← 추가: 마지막 형광펜 색상 유지용
-      textColor: '#51aae1',  // ← 추가: 인라인 글자색 유지용
+      hlColors: ['#ffeb3b', '#c8c8c8'], // 형광펜 슬롯 2개
+      curHlSlot: 0,
+      textColors: ['#51aae1', '#c8c8c8'], // 글자색 슬롯 2개
+      curTcSlot: 0,
       showTitle: false,
+      
+      titleFontSize: 36,
+      subtitleFontSize: 24,
       title: '',
       subtitle: '',
       charName: '',
@@ -2046,6 +2233,8 @@
           { id: 'in-ls', valId: 'ls-val', unit: 'px', val: state.letterSpacing },
           { id: 'in-lh', valId: 'lh-val', unit: '', val: state.lineHeightMult },
           { id: 'in-pad', valId: 'pad-val', unit: 'px', val: state.padding },
+          { id: 'in-title-fs', valId: 'title-fs-val', unit: 'px', val: state.titleFontSize },
+          { id: 'in-subtitle-fs', valId: 'subtitle-fs-val', unit: 'px', val: state.subtitleFontSize },
           { id: 'in-credsize', valId: 'credsize-val', unit: 'px', val: state.credSize },
           { id: 'in-insert-size', valId: 'insert-size-val', unit: 'px', val: state.insertSize },
           { id: 'in-insert-radius', valId: 'insert-radius-val', unit: 'px', val: state.insertRadius },
@@ -2152,19 +2341,23 @@
           document.getElementById('insert-file-name').innerText = '삽입 이미지 (복원됨)';
         }
         
-        // 형광펜 & 글자색 툴바 복원 (추가)
-        if (state.hlColor) {
-          const hlP = document.getElementById('in-hl-color');
-          const hlB = document.getElementById('fmt-hl-btn');
-          if (hlP) hlP.value = state.hlColor;
-          if (hlB) hlB.style.background = state.hlColor;
-        }
-        if (state.textColor) {
-          const tcP = document.getElementById('in-tc-color');
-          const tcB = document.getElementById('fmt-tc-btn');
-          if (tcP) tcP.value = state.textColor;
-          if (tcB) tcB.style.color = state.textColor;
-        }
+        // 형광펜 슬롯 2개 복원
+        const hl1 = (parsed.hlColors && parsed.hlColors[0]) || parsed.hlColor || '#ffeb3b';
+        const hl2 = (parsed.hlColors && parsed.hlColors[1]) || '#c8c8c8';
+        state.hlColors = [hl1, hl2];
+        state.curHlSlot = parsed.curHlSlot || 0;
+        hlPickers[0].value = state.hlColors[0];
+        hlPickers[1].value = state.hlColors[1];
+        setHlSlot(state.curHlSlot);
+
+        // 글자색 슬롯 2개 복원
+        const tc1 = (parsed.textColors && parsed.textColors[0]) || parsed.textColor || '#51aae1';
+        const tc2 = (parsed.textColors && parsed.textColors[1]) || '#c8c8c8';
+        state.textColors = [tc1, tc2];
+        state.curTcSlot = parsed.curTcSlot || 0;
+        tcPickers[0].value = state.textColors[0];
+        tcPickers[1].value = state.textColors[1];
+        setTcSlot(state.curTcSlot);
 
         state.profiles.forEach(p => {
           if (p.avatarData) {
@@ -2291,7 +2484,7 @@
         const full = match[0];
         if (full.startsWith('{{')) {
           const colorMatch = full.match(/^\{\{(?:(#[0-9A-Fa-f]{3,6}):)?([\s\S]*)\}\}$/);
-          const color = (colorMatch && colorMatch[1]) ? colorMatch[1] : (state.textColor || '#e11d48');
+          const color = (colorMatch && colorMatch[1]) ? colorMatch[1] : (state.textColor || '#51aae1');
           const inner = colorMatch ? colorMatch[2] : full.slice(2, -2);
           tokens.push(...parseFormattedText(inner, { ...currentStyle, textColor: color }));
         } else if (full.startsWith('==')) {
@@ -2647,19 +2840,23 @@
         const msgMatch = trimmed.match(/^\[([1-6])\]\s*(.+)$/);
         if (msgMatch) {
           const pIndex = parseInt(msgMatch[1], 10) - 1;
+          const parsed = extractCustomTime(msgMatch[2]);
           items.push({
             type: 'message',
             profileIdx: pIndex,
-            text: msgMatch[2],
+            text: parsed.text,
+            time: parsed.time,
             transText: null
           });
           return;
         }
 
+        const fallbackParsed = extractCustomTime(trimmed);
         items.push({
           type: 'message',
           profileIdx: 0,
-          text: trimmed,
+          text: fallbackParsed.text,
+          time: fallbackParsed.time,
           transText: null
         });
       });
@@ -2738,6 +2935,7 @@
           blocks.push({
             type: 'message',
             prof,
+            time: item.time || '오늘',
             lines,
             transLines,
             transFs,
@@ -3208,19 +3406,32 @@
         ctx.restore();
       }
 
-      // 영역 계산
       const contentX = state.padding;
       const contentY = state.padding;
       const contentW = canvas.width - (state.padding * 2);
       const contentH = canvas.height - (state.padding * 2);
 
+      const titleFs = state.titleFontSize || 36;
+      const subtitleFs = state.subtitleFontSize || 24;
+
+      let titleLines = [];
+      let subtitleLines = [];
       let titleHeight = 0;
+
       if (state.showTitle && (state.title || state.subtitle)) {
-        if (state.title) titleHeight += 36;
-        if (state.subtitle) titleHeight += 24;
-        titleHeight += 40;
+        if (state.title) {
+          titleLines = tokenizeRunsToLines(state.title, titleFs, state.font, state.letterSpacing, contentW);
+          titleHeight += titleLines.length * (titleFs * 1.18);
+        }
+        if (state.subtitle) {
+          subtitleLines = tokenizeRunsToLines(state.subtitle, subtitleFs, state.font, state.letterSpacing, contentW);
+          titleHeight += subtitleLines.length * (subtitleFs * 1.3);
+          if (state.title) titleHeight += 6;
+        }
+        titleHeight += 24;
       }
 
+      // 크레딧이랑 및 본문 작업 영역 계산
       const hasChar = Boolean(state.charName.trim());
       const hasCreator = Boolean(state.creator.trim());
       const hasCredit = hasChar || hasCreator;
@@ -3229,26 +3440,68 @@
       const workAreaY = contentY + titleHeight;
       const workAreaH = contentH - titleHeight - creditReserve;
 
-      // 제목 렌더링
+      // 제목/부제 렌더링
       if (state.showTitle && (state.title || state.subtitle)) {
-        ctx.textAlign = 'left';
-        ctx.textBaseline = 'top';
-        ctx.fillStyle = state.ink;
-
-        const titleFontFamily = getFontFamily(state.font);
-
         let curTitleY = contentY;
-        if (state.title) {
-          ctx.font = `700 36px ${titleFontFamily}`;
-          ctx.fillText(state.title, contentX, curTitleY);
-          curTitleY += 48;
+
+        const drawTitleRuns = (lines, fs, defaultAlpha = 1.0, defaultWeight = '700', lineSpacingMult = 1.18) => {
+          lines.forEach(line => {
+            let curX = contentX;
+            const centerY = curTitleY + (fs / 2);
+            line.runs.forEach(run => {
+              const emojiFont = getFontFamily(state.font);
+              // 굵기(Bold) / 기울임(Italic) 토글 태그 반영, 기본값은 지정된 굵기 적용
+              if (run.bold && run.italic) ctx.font = `bold italic ${fs}px ${emojiFont}`;
+              else if (run.bold) ctx.font = `bold ${fs}px ${emojiFont}`;
+              else if (run.italic) ctx.font = `italic ${fs}px ${emojiFont}`;
+              else ctx.font = `${defaultWeight} ${fs}px ${emojiFont}`;
+
+              if (run.mark) {
+                ctx.fillStyle = hexToRgba(run.markColor || '#ffeb3b', 0.5 * defaultAlpha);
+                ctx.fillRect(curX - 1, centerY - (fs * 0.55), run.width + 2, fs * 1.15);
+              }
+
+              ctx.fillStyle = hexToRgba(run.textColor || state.ink, defaultAlpha);
+              ctx.textBaseline = 'middle';
+              let drawCharX = curX;
+              const runChars = splitGraphemes(run.text);
+              for (let c = 0; c < runChars.length; c++) {
+                const ch = runChars[c];
+                ctx.fillText(ch, drawCharX, centerY);
+                drawCharX += ctx.measureText(ch).width + state.letterSpacing;
+              }
+
+              if (run.strike) {
+                ctx.strokeStyle = hexToRgba(run.textColor || state.ink, defaultAlpha);
+                ctx.lineWidth = Math.max(1.5, fs * 0.08);
+                ctx.beginPath();
+                ctx.moveTo(curX, centerY);
+                ctx.lineTo(curX + run.width, centerY);
+                ctx.stroke();
+              }
+              if (run.underline) {
+                ctx.strokeStyle = hexToRgba(run.textColor || state.ink, defaultAlpha);
+                ctx.lineWidth = Math.max(1.5, fs * 0.08);
+                ctx.beginPath();
+                const underlineY = centerY + (fs * 0.52);
+                ctx.moveTo(curX, underlineY);
+                ctx.lineTo(curX + run.width, underlineY);
+                ctx.stroke();
+              }
+              curX += run.width;
+            });
+            curTitleY += fs * lineSpacingMult;
+          });
+        };
+        
+        // 제목
+        if (state.title && titleLines.length > 0) {
+          drawTitleRuns(titleLines, titleFs, 1.0, '700', 1.18);
+          if (state.subtitle) curTitleY += 6; // 제목-부제 사이 간격 6px
         }
-        if (state.subtitle) {
-          ctx.font = `500 24px ${titleFontFamily}`;
-          ctx.globalAlpha = 0.65;
-          ctx.fillText(state.subtitle, contentX, curTitleY);
-          curTitleY += 36;
-          ctx.globalAlpha = 1.0;
+        // 부제
+        if (state.subtitle && subtitleLines.length > 0) {
+          drawTitleRuns(subtitleLines, subtitleFs, 0.65, '500', 1.3);
         }
       }
       
@@ -3438,7 +3691,11 @@
             if (chatMatch) {
               const pIdx = parseInt(chatMatch[1], 10) - 1;
               const prof = state.profiles[pIdx] || state.profiles[0];
-              const msgContent = chatMatch[2];
+              
+              // ★ 시간 분리
+              const parsedMsg = extractCustomTime(chatMatch[2]);
+              const msgContent = parsedMsg.text;
+              const msgTime = parsedMsg.time;
 
               // 다음 줄이 [-] 번역문인지 확인
               let transContent = null;
@@ -3499,6 +3756,7 @@
               blocks.push({
                 type: 'chat',
                 prof,
+                time: msgTime,
                 lines,
                 transLines,
                 transFs,
@@ -3699,7 +3957,7 @@
 
               ctx.font = `400 ${Math.max(10, b.nameFontSize * 0.78)}px "${state.font}"`;
               ctx.fillStyle = hexToRgba(state.ink, 0.45);
-              ctx.fillText('오늘', textLeft + nWidth + 8, curRenderY + 2);
+              ctx.fillText(b.time || '오늘', textLeft + nWidth + 8, curRenderY + 2);
               ctx.restore();
 
               const chatLineStep = effectiveFontSize + b.lineSpacing;
@@ -3992,7 +4250,7 @@
 
               ctx.font = `400 ${Math.max(10, b.nameFontSize * 0.78)}px "${state.font}"`;
               ctx.fillStyle = hexToRgba(state.ink, 0.45);
-              ctx.fillText('오늘', textLeft + nWidth + 8, curY + 2);
+              ctx.fillText(b.time || '오늘', textLeft + nWidth + 8, curY + 2);
               ctx.restore();
 
               ctx.textAlign = 'left';
@@ -4231,14 +4489,28 @@
     });
 
     // ==========================================
-    // 스마트 토글 및 중첩 서식 감싸기 함수 (원본 100% 보존)
+    // 스마트 토글이랑 중첩 서식 함수
     // ==========================================
+    let lastActiveTextInput = document.getElementById('in-text');
+    ['in-text', 'in-title', 'in-subtitle'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.addEventListener('focus', () => { lastActiveTextInput = el; });
+      }
+    });
+    
+    // 드래그 풀림 방지... 이제야넣음 ㅎㅎ머쓱;
+    document.querySelectorAll('.fmt-toolbar-standalone button, .fmt-toolbar-standalone label').forEach(btn => {
+      btn.addEventListener('mousedown', (e) => e.preventDefault());
+    });
+
     function toggleFormat(type, param = null) {
-      const ta = document.getElementById('in-text');
+      const ta = lastActiveTextInput || document.getElementById('in-text');
       const start = ta.selectionStart;
       const end = ta.selectionEnd;
       const val = ta.value;
 
+      // 드래그 선택 없이 커서만 있을 때
       if (start === end) {
         let prefix = '', suffix = '', placeholder = '텍스트';
         if (type === 'bold') { prefix = '**'; suffix = '**'; }
@@ -4249,33 +4521,30 @@
           prefix = (param && param.toLowerCase() !== '#ffeb3b') ? `==${param}:` : '==';
           suffix = '==';
         }
-        else if (type === 'textColor') { // ← 추가
+        else if (type === 'textColor') {
           prefix = param ? `{{${param}:` : '{{';
           suffix = '}}';
         }
 
         const insertText = `${prefix}${placeholder}${suffix}`;
+        
         ta.value = val.substring(0, start) + insertText + val.substring(end);
         ta.selectionStart = start + prefix.length;
         ta.selectionEnd = start + prefix.length + placeholder.length;
-        state.text = ta.value;
+        
+        if (ta.id === 'in-text') state.text = ta.value;
+        else if (ta.id === 'in-title') state.title = ta.value;
+        else if (ta.id === 'in-subtitle') state.subtitle = ta.value;
+
         ta.focus();
         render();
         return;
       }
 
+      // 글자를 드래그 선택했을 때
       let sel = val.substring(start, end);
       let newSel = '';
 
-      // 서식 태그 정의
-      const patterns = {
-        bold: { open: '**', close: '**' },
-        italic: { open: '*', close: '*' },
-        underline: { open: '__', close: '__' },
-        strike: { open: '~~', close: '~~' }
-      };
-
-      // 1. 볼드 / 기울임 토글 (3중 강조 *** 완벽 분기 및 위치 무관 제거)
       if (type === 'bold') {
         if (sel.includes('***')) {
           newSel = sel.replaceAll('***', '*');
@@ -4298,7 +4567,6 @@
           newSel = '*' + sel + '*';
         }
       }
-      // 2. 밑줄 토글
       else if (type === 'underline') {
         if (sel.includes('__')) {
           newSel = sel.replaceAll('__', '');
@@ -4306,7 +4574,6 @@
           newSel = '__' + sel + '__';
         }
       }
-      // 3. 취소선 토글
       else if (type === 'strike') {
         if (sel.includes('~~')) {
           newSel = sel.replaceAll('~~', '');
@@ -4314,7 +4581,6 @@
           newSel = '~~' + sel + '~~';
         }
       } 
-      // 4. 형광펜 토글 (바깥/안쪽 색상 치환 및 완벽 제거)
       else if (type === 'mark') {
         const markRegex = /==(?:(#[0-9A-Fa-f]{3,6}):)?([\s\S]*?)==/;
         if (markRegex.test(sel)) {
@@ -4334,14 +4600,12 @@
           newSel = `${prefix}${sel}==`;
         }
       }
-        
-      // 5. 부분 글자색 토글 (새로 추가)
       else if (type === 'textColor') {
         const colorRegex = /\{\{(?:(#[0-9A-Fa-f]{3,6}):)?([\s\S]*?)\}\}/;
         if (colorRegex.test(sel)) {
           const match = sel.match(colorRegex);
-          const currentColor = (match[1] || state.textColor || '#e11d48').toLowerCase();
-          const targetColor = (param || '#e11d48').toLowerCase();
+          const currentColor = (match[1] || state.textColor || '#51aae1').toLowerCase();
+          const targetColor = (param || '#51aae1').toLowerCase();
 
           if (currentColor === targetColor) {
             newSel = sel.replace(colorRegex, '$2');
@@ -4349,7 +4613,7 @@
             newSel = sel.replace(colorRegex, `{{${targetColor}:$2}}`);
           }
         } else {
-          const color = param || '#e11d48';
+          const color = param || '#51aae1';
           newSel = `{{${color}:${sel}}}`;
         }
       }
@@ -4357,7 +4621,11 @@
       ta.value = val.substring(0, start) + newSel + val.substring(end);
       ta.selectionStart = start;
       ta.selectionEnd = start + newSel.length;
-      state.text = ta.value;
+
+      if (ta.id === 'in-text') state.text = ta.value;
+      else if (ta.id === 'in-title') state.title = ta.value;
+      else if (ta.id === 'in-subtitle') state.subtitle = ta.value;
+
       ta.focus();
       render();
     }
@@ -4368,28 +4636,56 @@
     document.getElementById('fmt-underline').addEventListener('click', () => toggleFormat('underline'));
     document.getElementById('fmt-strike').addEventListener('click', () => toggleFormat('strike'));
     
+    // --- 형광펜 듀얼 슬롯 로직 ---
     const hlBtn = document.getElementById('fmt-hl-btn');
-    const hlPicker = document.getElementById('in-hl-color');
-    hlBtn.addEventListener('click', () => {
-      toggleFormat('mark', hlPicker.value);
-    });
-    // 형광펜 기존 리스너 수정: state.hlColor에 저장
-    hlPicker.addEventListener('input', (e) => { 
-      hlBtn.style.background = e.target.value;
-      state.hlColor = e.target.value; // ← 추가
+    const hlPickers = [
+      document.getElementById('in-hl-color-1'),
+      document.getElementById('in-hl-color-2')
+    ];
+
+    function setHlSlot(index) {
+      state.curHlSlot = index;
+      hlPickers.forEach((p, idx) => p.classList.toggle('active-slot', idx === index));
+      hlBtn.style.background = state.hlColors[index];
       scheduleSave();
+    }
+
+    hlBtn.addEventListener('click', () => {
+      toggleFormat('mark', state.hlColors[state.curHlSlot]);
     });
 
-    // ▼ 아래 부분 추가: 인라인 글자색 버튼 & 픽커 이벤트 바인딩
-    const tcBtn = document.getElementById('fmt-tc-btn');
-    const tcPicker = document.getElementById('in-tc-color');
-    tcBtn.addEventListener('click', () => {
-      toggleFormat('textColor', tcPicker.value);
+    hlPickers.forEach((picker, idx) => {
+      picker.addEventListener('click', () => setHlSlot(idx));
+      picker.addEventListener('input', (e) => {
+        state.hlColors[idx] = e.target.value;
+        setHlSlot(idx);
+      });
     });
-    tcPicker.addEventListener('input', (e) => {
-      tcBtn.style.color = e.target.value;
-      state.textColor = e.target.value;
+
+    // --- 글자색 듀얼 슬롯 로직 ---
+    const tcBtn = document.getElementById('fmt-tc-btn');
+    const tcPickers = [
+      document.getElementById('in-tc-color-1'),
+      document.getElementById('in-tc-color-2')
+    ];
+
+    function setTcSlot(index) {
+      state.curTcSlot = index;
+      tcPickers.forEach((p, idx) => p.classList.toggle('active-slot', idx === index));
+      tcBtn.style.color = state.textColors[index];
       scheduleSave();
+    }
+
+    tcBtn.addEventListener('click', () => {
+      toggleFormat('textColor', state.textColors[state.curTcSlot]);
+    });
+
+    tcPickers.forEach((picker, idx) => {
+      picker.addEventListener('click', () => setTcSlot(idx));
+      picker.addEventListener('input', (e) => {
+        state.textColors[idx] = e.target.value;
+        setTcSlot(idx);
+      });
     });
 
     document.getElementById('fmt-quote').addEventListener('click', () => {
@@ -4997,6 +5293,23 @@
           state.insertImgData = null;
           document.getElementById('file-name').innerText = '＋ 배경 파일 선택';
           document.getElementById('insert-file-name').innerText = '＋ 이미지 선택';
+
+          state.titleFontSize = 36;
+          state.subtitleFontSize = 24;
+          
+          const inTitleFs = document.getElementById('in-title-fs');
+          const inSubFs = document.getElementById('in-subtitle-fs');
+          if (inTitleFs) {
+            inTitleFs.value = 36;
+            document.getElementById('title-fs-val').innerText = '36px';
+            updateRangeProgress(inTitleFs);
+          }
+          if (inSubFs) {
+            inSubFs.value = 24;
+            document.getElementById('subtitle-fs-val').innerText = '24px';
+            updateRangeProgress(inSubFs);
+          }
+          
           syncModeUI();
           render();
         };
@@ -5098,13 +5411,24 @@
       presets.forEach((preset) => {
         const card = document.createElement('div');
         card.className = 'preset-item-card';
-        card.style.setProperty('--hl-color', preset.hlColor || '#ffeb3b');
+        const cardHl = (preset.hlColors && preset.hlColors[0]) || preset.hlColor || '#ffeb3b';
+        card.style.setProperty('--hl-color', cardHl);
 
         const isBgImg = preset.bgType === 'image';
         const bgDotColor = isBgImg ? '#64748b' : preset.bg;
 
+        // renderPresetList 함수 내부 card.innerHTML 교체
         card.innerHTML = `
-          <button type="button" class="btn-preset-del" data-id="${preset.id}" title="삭제">✕</button>
+          <div class="preset-card-actions">
+            <button type="button" class="btn-preset-action export" data-id="${preset.id}" title="파일로 내보내기">
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="17 8 12 3 7 8"></polyline>
+                <line x1="12" y1="3" x2="12" y2="15"></line>
+              </svg>
+            </button>
+            <button type="button" class="btn-preset-action del" data-id="${preset.id}" title="삭제">✕</button>
+          </div>
           <div class="preset-item-badge">${preset.ratio}</div>
           <div class="preset-item-center">
             <span class="preset-item-name" title="${preset.name}">${preset.name}</span>
@@ -5112,7 +5436,7 @@
               <span class="preset-item-dot" style="background:${bgDotColor};" title="배경: ${preset.bgType}"></span>
               <span style="font-family:'${preset.font}', sans-serif;">${preset.font === 'Pretendard' ? '고딕' : '명조'}</span>
               <span>·</span>
-              <span style="color:${preset.textColor || preset.ink}; font-weight:800;">A</span>
+              <span style="color:${(preset.textColors && preset.textColors[0]) || preset.textColor || preset.ink}; font-weight:800;">A</span>
             </div>
           </div>
           <div style="font-size:10px; color:#94a3b8; text-align:center; letter-spacing:-0.02em;">
@@ -5121,7 +5445,7 @@
         `;
 
         card.addEventListener('click', (e) => {
-          if (e.target.closest('.btn-preset-del')) return;
+          if (e.target.closest('.btn-preset-action')) return; // 버튼 클릭 시 적용 방지
           applyPreset(preset);
           document.getElementById('preset-modal').style.display = 'none';
         });
@@ -5129,12 +5453,26 @@
         grid.appendChild(card);
       });
 
-      grid.querySelectorAll('.btn-preset-del').forEach(btn => {
+      // 삭제 이벤트
+      grid.querySelectorAll('.btn-preset-action.del').forEach(btn => {
         btn.addEventListener('click', async (e) => {
           e.stopPropagation();
           const targetId = Number(btn.dataset.id);
           await deletePresetFromStorage(targetId);
           renderPresetList();
+        });
+      });
+
+      // ▼▼▼ 내보내기(Export) 이벤트 연결 ▼▼▼
+      grid.querySelectorAll('.btn-preset-action.export').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const targetId = Number(btn.dataset.id);
+          const targetPreset = presets.find(p => p.id === targetId);
+          if (targetPreset) {
+            const safeName = (targetPreset.name || '프리셋').replace(/[\\/:*?"<>|]/g, '');
+            downloadPresetJson(targetPreset, `[윳!발췌기]_${safeName}.json`);
+          }
         });
       });
     }
@@ -5209,6 +5547,8 @@
         { id: 'in-ls', valId: 'ls-val', unit: 'px', val: state.letterSpacing },
         { id: 'in-lh', valId: 'lh-val', unit: '', val: state.lineHeightMult },
         { id: 'in-pad', valId: 'pad-val', unit: 'px', val: state.padding },
+        { id: 'in-title-fs', valId: 'title-fs-val', unit: 'px', val: state.titleFontSize },
+        { id: 'in-subtitle-fs', valId: 'subtitle-fs-val', unit: 'px', val: state.subtitleFontSize },
         { id: 'in-credsize', valId: 'credsize-val', unit: 'px', val: state.credSize },
         { id: 'in-insert-size', valId: 'insert-size-val', unit: 'px', val: state.insertSize },
         { id: 'in-insert-radius', valId: 'insert-radius-val', unit: 'px', val: state.insertRadius },
@@ -5231,14 +5571,23 @@
       });
 
       syncInkUI(state.ink);
-      if (state.hlColor) {
-        document.getElementById('in-hl-color').value = state.hlColor;
-        document.getElementById('fmt-hl-btn').style.background = state.hlColor;
-      }
-      if (state.textColor) {
-        document.getElementById('in-tc-color').value = state.textColor;
-        document.getElementById('fmt-tc-btn').style.color = state.textColor;
-      }
+      // 형광펜 복원
+      const appHl1 = (preset.hlColors && preset.hlColors[0]) || preset.hlColor || '#ffeb3b';
+      const appHl2 = (preset.hlColors && preset.hlColors[1]) || '#c8c8c8';
+      state.hlColors = [appHl1, appHl2];
+      state.curHlSlot = preset.curHlSlot || 0;
+      hlPickers[0].value = state.hlColors[0];
+      hlPickers[1].value = state.hlColors[1];
+      setHlSlot(state.curHlSlot);
+
+      // 글자색 복원
+      const appTc1 = (preset.textColors && preset.textColors[0]) || preset.textColor || '#51aae1';
+      const appTc2 = (preset.textColors && preset.textColors[1]) || '#c8c8c8';
+      state.textColors = [appTc1, appTc2];
+      state.curTcSlot = preset.curTcSlot || 0;
+      tcPickers[0].value = state.textColors[0];
+      tcPickers[1].value = state.textColors[1];
+      setTcSlot(state.curTcSlot);
 
       document.getElementById('in-color-picker').value = state.bg;
       document.getElementById('in-color-hex').value = state.bg.toUpperCase();
@@ -5326,6 +5675,76 @@
         render();
       }
     }
+    
+    // 1. 공통 JSON 파일 다운로드 함수
+    function downloadPresetJson(data, filename) {
+      const exportData = JSON.parse(JSON.stringify(data));
+      delete exportData.id;
+      delete exportData.bgImg;
+      delete exportData.insertImg;
+      if (exportData.profiles) {
+        exportData.profiles.forEach(p => delete p.avatarImg);
+      }
+
+      const jsonStr = JSON.stringify(exportData, null, 2);
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      
+      const a = document.createElement('a');
+      a.download = filename;
+      a.href = url;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    // 2. [현재 설정 파일로 내보내기] 버튼 클릭 이벤트
+    document.getElementById('btn-export-current').addEventListener('click', () => {
+      const defaultName = state.title.trim() || state.charName.trim() || '프리셋';
+      const safeName = defaultName.replace(/[\\/:*?"<>|]/g, '');
+      downloadPresetJson(state, `[윳!발췌기]_${safeName}.json`);
+    });
+
+    // 3. [프리셋 불러오기] 파일 선택 이벤트
+    document.getElementById('in-import-file').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = async (evt) => {
+        try {
+          const imported = JSON.parse(evt.target.result);
+          
+          if (!imported || !imported.mode || !imported.ratio) {
+            alert('올바른 발췌기 프리셋(.json) 파일이 아닙니다.');
+            return;
+          }
+
+          delete imported.id;
+          imported.createdAt = Date.now();
+          if (!imported.name) {
+            imported.name = file.name.replace('.json', '').replace('[발췌기]_', '') || '가져온 프리셋';
+          }
+
+          const db = await openPresetDB();
+          const tx = db.transaction(STORE_NAME, 'readwrite');
+          tx.objectStore(STORE_NAME).add(imported);
+
+          tx.oncomplete = () => {
+            renderPresetList();
+            applyPreset(imported);
+            alert(`'${imported.name}' 프리셋을 불러왔습니다!`);
+          };
+        } catch (err) {
+          console.error(err);
+          alert('프리셋 파일을 읽는 데 실패했습니다.');
+        } finally {
+          e.target.value = '';
+        }
+      };
+      reader.readAsText(file);
+    });
 
     // 프리셋 모달 열기/닫기 이벤트
     const presetModal = document.getElementById('preset-modal');
@@ -5339,6 +5758,20 @@
     });
     presetModal.addEventListener('click', (e) => {
       if (e.target === presetModal) presetModal.style.display = 'none';
+    });
+    
+    
+    // 제목/부제 크기 슬라이더 리스너
+    document.getElementById('in-title-fs').addEventListener('input', (e) => {
+      state.titleFontSize = parseInt(e.target.value, 10);
+      document.getElementById('title-fs-val').innerText = `${state.titleFontSize}px`;
+      render();
+    });
+
+    document.getElementById('in-subtitle-fs').addEventListener('input', (e) => {
+      state.subtitleFontSize = parseInt(e.target.value, 10);
+      document.getElementById('subtitle-fs-val').innerText = `${state.subtitleFontSize}px`;
+      render();
     });
   </script>
 </body>
