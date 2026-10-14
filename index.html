@@ -857,7 +857,320 @@
       display: block;
     }
     canvas.draggable { cursor: grab; }
+
+    /* ================= 미리보기 보기 방식 ================= */
+    .stage-wrap {
+      flex: 1;
+      min-width: 0;
+      position: relative;
+      display: flex;
+    }
+    .stage.zoomed {
+      overflow: auto;
+      align-items: flex-start;
+      justify-content: flex-start;
+      user-select: none;
+    }
+    .stage.zoomed .canvas-container {
+      max-width: none;
+      max-height: none;
+      flex-shrink: 0;
+      margin: auto; /* 작으면 가운데, 크면 왼쪽 위부터 스크롤 */
+    }
+    .stage.zoomed canvas {
+      max-width: none;
+      max-height: none;
+    }
+    .stage.zoomed::-webkit-scrollbar { width: 10px; height: 10px; }
+    .stage.zoomed::-webkit-scrollbar-thumb {
+      background: rgba(81, 170, 225, 0.45);
+      border-radius: 10px;
+      border: 2px solid transparent;
+      background-clip: padding-box;
+    }
+    .view-toolbar {
+      position: absolute;
+      top: 14px;
+      right: 18px;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      padding: 4px;
+      background: rgba(255, 255, 255, 0.92);
+      border: 1px solid #dbeafe;
+      border-radius: 12px;
+      box-shadow: 0 4px 14px rgba(51, 114, 161, 0.12);
+      backdrop-filter: blur(6px);
+      user-select: none;
+    }
+    .view-toolbar button {
+      border: none;
+      background: transparent;
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 700;
+      color: #64748b;
+      padding: 6px 9px;
+      border-radius: 8px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s ease;
+    }
+    .view-toolbar button:hover { color: #1e293b; background: #f1f5f9; }
+    .view-toolbar button.on { background: #51aae1; color: #ffffff; }
+    .view-toolbar button[data-zoom] { font-size: 15px; padding: 4px 9px; }
+    .view-sep { width: 1px; height: 18px; background: #e2e8f0; margin: 0 3px; }
+    .view-pct {
+      min-width: 44px;
+      text-align: center;
+      font-size: 11.5px;
+      font-weight: 800;
+      color: #334155;
+      font-variant-numeric: tabular-nums;
+    }
+    @media (max-width: 768px) {
+      .stage-wrap { flex-direction: column; }
+      .view-toolbar {
+        position: sticky;
+        top: 8px;
+        right: auto;
+        align-self: center;
+        margin: 10px auto 0;
+      }
+      .stage.zoomed { max-height: 80vh; }
+    }
     canvas.draggable:active { cursor: grabbing; }
+
+    /* ================= 스티커 조절 테두리 ================= */
+    .sticker-overlay {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      display: none;
+      z-index: 5;
+    }
+    .sticker-box {
+      position: absolute;
+      border: 1.5px solid #51aae1;
+      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.7);
+      transform-origin: center center;
+      pointer-events: none;
+    }
+    .st-handle {
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      margin: -7px 0 0 -7px;
+      background: #ffffff;
+      border: 2px solid #51aae1;
+      border-radius: 50%;
+      pointer-events: auto;
+      touch-action: none;
+      box-shadow: 0 1px 4px rgba(15, 23, 42, 0.25);
+    }
+    .st-handle[data-h="nw"] { left: 0; top: 0; cursor: nwse-resize; }
+    .st-handle[data-h="ne"] { left: 100%; top: 0; cursor: nesw-resize; }
+    .st-handle[data-h="sw"] { left: 0; top: 100%; cursor: nesw-resize; }
+    .st-handle[data-h="se"] { left: 100%; top: 100%; cursor: nwse-resize; }
+    .st-rotate {
+      position: absolute;
+      left: 50%;
+      top: 100%;
+      width: 26px;
+      height: 26px;
+      margin: 18px 0 0 -13px;
+      border-radius: 50%;
+      background: #51aae1;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: auto;
+      touch-action: none;
+      cursor: grab;
+      box-shadow: 0 2px 8px rgba(61, 152, 207, 0.4);
+    }
+    .st-rotate::before {
+      content: "";
+      position: absolute;
+      left: 50%;
+      bottom: 100%;
+      width: 1.5px;
+      height: 18px;
+      background: #51aae1;
+      transform: translateX(-50%);
+    }
+    .st-rotate svg { width: 14px; height: 14px; }
+    .st-del {
+      position: absolute;
+      left: 50%;
+      bottom: 100%;
+      width: 24px;
+      height: 24px;
+      margin: 0 0 12px -12px;
+      border-radius: 50%;
+      border: 1.5px solid #e2e8f0;
+      background: #ffffff;
+      color: #94a3b8;
+      font-size: 12px;
+      line-height: 1;
+      cursor: pointer;
+      pointer-events: auto;
+      box-shadow: 0 2px 6px rgba(15, 23, 42, 0.15);
+    }
+    .st-del:hover { color: #e11d48; border-color: #e11d48; background: #fff1f2; }
+    body.sticker-rotating, body.sticker-rotating * { cursor: grabbing !important; }
+
+    /* 잠긴 스티커 */
+    .sticker-box.locked { border-style: dashed; border-color: #94a3b8; }
+    .sticker-box.locked .st-handle,
+    .sticker-box.locked .st-rotate,
+    .sticker-box.locked .st-del { display: none; }
+    .sticker-box.locked::after {
+      content: "🔒 잠김";
+      position: absolute;
+      left: 50%;
+      bottom: 100%;
+      margin-bottom: 8px;
+      transform: translateX(-50%);
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #64748b;
+      padding: 3px 9px;
+      white-space: nowrap;
+    }
+
+    /* 썸네일 목록 (스티커 / 채팅 이미지) */
+    .thumb-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .thumb-item {
+      position: relative;
+      width: 54px;
+      height: 54px;
+      border-radius: 10px;
+      border: 1.5px solid #e2e8f0;
+      background-color: #f8fafc;
+      background-image: linear-gradient(45deg, #eef2f6 25%, transparent 25%, transparent 75%, #eef2f6 75%),
+                        linear-gradient(45deg, #eef2f6 25%, transparent 25%, transparent 75%, #eef2f6 75%);
+      background-size: 10px 10px;
+      background-position: 0 0, 5px 5px;
+      cursor: pointer;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+    }
+    .thumb-item:hover { border-color: #85c8f2; }
+    .thumb-item.on { border-color: #51aae1; box-shadow: 0 0 0 2px rgba(81, 170, 225, 0.25); }
+    .thumb-item img { max-width: 100%; max-height: 100%; object-fit: contain; pointer-events: none; }
+    .thumb-badge {
+      position: absolute;
+      left: 3px;
+      bottom: 3px;
+      font-size: 9.5px;
+      font-weight: 800;
+      color: #3d98cf;
+      background: rgba(255, 255, 255, 0.92);
+      border-radius: 5px;
+      padding: 1px 4px;
+      pointer-events: none;
+    }
+    .thumb-lock {
+      position: absolute;
+      right: 3px;
+      bottom: 3px;
+      font-size: 10px;
+      line-height: 1;
+      background: rgba(255, 255, 255, 0.92);
+      border-radius: 5px;
+      padding: 2px 3px;
+      pointer-events: none;
+    }
+    .thumb-del {
+      position: absolute;
+      top: 3px;
+      right: 3px;
+      width: 16px;
+      height: 16px;
+      padding: 0;
+      border: none;
+      border-radius: 50%;
+      background: rgba(15, 23, 42, 0.55);
+      color: #ffffff;
+      font-size: 9px;
+      line-height: 16px;
+      cursor: pointer;
+    }
+    .thumb-del:hover { background: #e11d48; }
+
+    /* 글 길이에 맞추기 (자동 높이) 버튼 */
+    .ratio-auto-btn {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 12px;
+      margin-top: -2px;
+      background: #f1f5f9;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      font-family: inherit;
+      color: #64748b;
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.15s ease;
+    }
+    .ratio-auto-btn:hover { border-color: #cbd5e1; color: #334155; }
+    .ratio-auto-icon {
+      width: 26px;
+      height: 26px;
+      flex-shrink: 0;
+      border-radius: 7px;
+      background: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 800;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    }
+    .ratio-auto-text { display: flex; flex-direction: column; gap: 1px; }
+    .ratio-auto-text b { font-size: 12.5px; font-weight: 800; color: inherit; }
+    .ratio-auto-text small { font-size: 10.5px; font-weight: 600; opacity: 0.8; }
+    .ratio-auto-btn.on {
+      background: #eef7fc;
+      border-color: #51aae1;
+      color: #3d98cf;
+      box-shadow: 0 0 0 2px rgba(81, 170, 225, 0.15);
+    }
+    .ratio-auto-btn.on .ratio-auto-icon { background: #51aae1; color: #ffffff; }
+
+    .btn-mini {
+      padding: 0 10px;
+      height: 35px;
+      flex-shrink: 0;
+      background: #ffffff;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 9px;
+      font-family: inherit;
+      font-size: 14px;
+      color: #64748b;
+      cursor: pointer;
+    }
+    .btn-mini:hover { border-color: #51aae1; color: #51aae1; }
+    @media (pointer: coarse) {
+      .st-handle { width: 22px; height: 22px; margin: -11px 0 0 -11px; }
+      .st-rotate { width: 32px; height: 32px; margin: 18px 0 0 -16px; }
+      .st-del { width: 30px; height: 30px; margin: 0 0 12px -15px; }
+    }
 
     @media (max-width: 768px) {
       html {
@@ -1149,9 +1462,12 @@
     /* 프리셋 2열 카드 그리드 */
     .preset-grid {
       flex: 1;
+      min-height: 0;              /* 추가: 모달 안에서 스크롤 정상 작동 */
       overflow-y: auto;
       display: grid;
       grid-template-columns: 1fr 1fr;
+      grid-auto-rows: max-content; /* 추가: 줄 높이가 카드 높이만큼 확보됨 */
+      align-content: start;        /* 추가: 카드가 적을 때 위로 정렬 */
       gap: 12px;
       padding: 4px;
     }
@@ -1195,6 +1511,7 @@
 
     .preset-item-card {
       aspect-ratio: 1 / 1;
+      min-height: 150px;
       border-radius: 14px;
       border: 1.5px solid #e2e8f0;
       background: #f8fafc;
@@ -1342,6 +1659,157 @@
       background: #fff1f2;
     }
 
+    /* ================= 프리셋 폴더 · 즐겨찾기 · 드래그 정렬 ================= */
+    .preset-nav {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin: -6px 0 10px;
+      min-height: 28px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #64748b;
+    }
+    .preset-nav-crumb {
+      background: none;
+      border: 1.5px solid transparent;
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 700;
+      color: #64748b;
+      cursor: pointer;
+      padding: 4px 9px;
+      border-radius: 8px;
+      transition: all 0.15s ease;
+      max-width: 200px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .preset-nav-crumb:hover { background: #eef7fc; color: #51aae1; }
+    .preset-nav-crumb.current {
+      color: #1e293b;
+      font-weight: 800;
+      cursor: default;
+      background: none;
+      padding-left: 2px;
+    }
+    .preset-nav-sep { color: #cbd5e1; }
+    .preset-nav-hint {
+      margin-left: auto;
+      font-size: 10.5px;
+      font-weight: 600;
+      color: #94a3b8;
+      white-space: nowrap;
+    }
+
+    .preset-section-label {
+      grid-column: 1 / -1;
+      font-size: 11px;
+      font-weight: 800;
+      color: #51aae1;
+      letter-spacing: 0.02em;
+      padding: 2px 2px 0;
+    }
+    .preset-section-label:not(:first-child) { margin-top: 6px; }
+
+    .preset-folder-tile {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 11px 10px 11px 12px;
+      border-radius: 12px;
+      border: 1.5px solid #dbeafe;
+      background: #f0f7fc;
+      cursor: pointer;
+      position: relative;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+      transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .preset-folder-tile:hover {
+      border-color: #51aae1;
+      box-shadow: 0 4px 12px rgba(81, 170, 225, 0.18);
+    }
+    .preset-folder-icon {
+      width: 26px;
+      height: 26px;
+      flex-shrink: 0;
+      color: #51aae1;
+    }
+    .preset-folder-info {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .preset-folder-name {
+      font-size: 13px;
+      font-weight: 800;
+      color: #1e293b;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .preset-folder-count {
+      font-size: 10.5px;
+      font-weight: 600;
+      color: #64748b;
+    }
+    .preset-folder-actions {
+      display: flex;
+      gap: 3px;
+      flex-shrink: 0;
+    }
+
+    .preset-item-card {
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+    }
+    .preset-item-card.is-fav { border-color: #fde68a; }
+    .btn-preset-action.fav { font-size: 12px; }
+    .btn-preset-action.fav.on {
+      opacity: 1;
+      color: #f59e0b;
+      border-color: #fcd34d;
+      background: #fffbeb;
+    }
+    .btn-preset-action.fav:hover {
+      color: #f59e0b;
+      border-color: #fcd34d;
+      background: #fffbeb;
+    }
+    .preset-item-folder-tag {
+      color: #51aae1;
+      font-weight: 700;
+    }
+
+    /* 드래그 */
+    .preset-drag-ghost {
+      position: fixed !important;
+      z-index: 1000000;
+      pointer-events: none;
+      margin: 0 !important;
+      opacity: 0.92;
+      transition: none !important;
+      transform: rotate(-2deg) scale(1.03) !important;
+      box-shadow: 0 14px 30px rgba(15, 23, 42, 0.22) !important;
+    }
+    .is-drag-source { opacity: 0.3; }
+    .drop-before { box-shadow: -4px 0 0 0 #51aae1 !important; }
+    .drop-after { box-shadow: 4px 0 0 0 #51aae1 !important; }
+    .drop-into {
+      border-color: #51aae1 !important;
+      background: #dbeefa !important;
+      color: #51aae1 !important;
+      transform: scale(1.04);
+    }
+    body.preset-dragging,
+    body.preset-dragging * { cursor: grabbing !important; }
+
     @media (max-width: 768px) {
       /* 1. 이동 버튼들은 원래 기본 위치(우하단)로 복원 */
       .mobile-nav-fab {
@@ -1474,17 +1942,29 @@
         
         <!-- 일반 모드 안내사항 -->
         <div class="chat-guide-tip" id="normal-syntax-guide">
-          💡 <b>[1]~[6]</b>: 말풍선 삽입 / <b>[-]</b>: 번역<br>
+          💡 <b>[1]~[6]</b>: 말풍선 삽입 / <b>[-]</b>: 번역 / <b>[사진1]</b>: 사진 말풍선<br>
           <span style="font-size: 11px; opacity: 0.85;">*말풍선은 <b>채팅 모드</b>에서 지정한 테마와 프로필 설정이 적용됩니다.</span>
         </div>
           
         <!-- 채팅 모드 안내사항 -->
         <div class="chat-guide-tip" id="chat-syntax-guide" style="display:none;">
-          💡 <b>[1]~[6]:</b> 프로필별 채팅 / <b>[-]:</b> 번역 / <b>[s]:</b> 시스템 알림<br>
+          💡 <b>[1]~[6]:</b> 프로필별 채팅 / <b>[-]:</b> 번역 / <b>[s]:</b> 시스템 알림 / <b>[1] [사진1]:</b> 사진<br>
           <span style="font-size: 11px; opacity: 0.85;">*내용 뒤에 <b>&lt;[시간]&gt;</b>을 붙이면 타임라인형 시간이 변경됩니다.</span>
 
         </div>
           
+      </div>
+
+      <!-- 채팅 이미지 (사진 말풍선) -->
+      <div class="panel-divider"></div>
+      <div class="field-group">
+        <span class="label-sub">💬 사진 말풍선</span>
+        <label class="file-dropzone" for="in-chat-img-file">
+          <span>＋ 말풍선에 넣을 사진 추가 (여러 장 가능)</span>
+          <input type="file" id="in-chat-img-file" accept="image/*" multiple style="display:none;">
+        </label>
+        <div class="thumb-list" id="chat-img-list" style="display:none;"></div>
+        <span style="font-size:11.5px; color:var(--text-sub); line-height:1.5;">*사진을 누르면 커서 위치에 <b>[1] [사진1]</b>이 들어가요!</span>
       </div>
 
       <!-- 일반 모드 전용: 본문 이미지 삽입 영역 -->
@@ -1609,6 +2089,49 @@
             <span>글자색</span>
             <input type="color" id="in-p-text-color" value="#371d1e">
           </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 1-C. 스티커 -->
+    <section class="panel-card">
+      <div class="panel-card-title">✦ 스티커</div>
+
+      <label class="file-dropzone" for="in-sticker-file">
+        <span>＋ 스티커 추가 (여러 장 선택 가능)</span>
+        <input type="file" id="in-sticker-file" accept="image/*" multiple style="display:none;">
+      </label>
+
+      <div class="chat-guide-tip" id="sticker-empty-tip" style="margin-top:0;">아직 올린 스티커가 없어요ㅜㅅㅜ</div>
+      <div class="thumb-list" id="sticker-list" style="display:none;"></div>
+
+      <div id="sticker-controls" style="display:none; flex-direction:column; gap:10px; background:var(--bg-editor-sub); padding:14px; border-radius:10px; border:1.5px solid var(--border-accent);">
+        <span class="label-sub">테두리 두께</span>
+        <div class="range-row">
+          <input type="range" id="in-st-border" min="0" max="40" step="1" value="12">
+          <span id="st-border-val">12px</span>
+        </div>
+
+        <span class="label-sub">테두리 색상</span>
+        <div class="swatches">
+          <div class="color-picker-wrap">
+            <span class="picker-label-text">직접 선택</span>
+            <input type="color" id="in-st-color" value="#ffffff" title="테두리 색상">
+            <input type="text" id="in-st-color-hex" class="color-code-input" value="#FFFFFF" maxlength="7">
+          </div>
+        </div>
+
+        <div class="toggle-row on" id="tog-st-shadow">
+          <div class="sw-track"></div>
+          <span class="toggle-label">그림자</span>
+        </div>
+
+        <div class="seg-buttons" id="st-layer-group">
+          <button type="button" data-act="lock" id="st-btn-lock">🔒 잠금</button>
+          <button type="button" data-act="front">맨 앞으로</button>
+          <button type="button" data-act="back">맨 뒤로</button>
+          <button type="button" data-act="dup">복제</button>
+          <button type="button" data-act="del">삭제</button>
         </div>
       </div>
     </section>
@@ -1771,6 +2294,14 @@
         </div>
       </div>
         
+      <button type="button" class="ratio-auto-btn" id="btn-ratio-auto" data-ratio="auto">
+        <span class="ratio-auto-icon">↕</span>
+        <span class="ratio-auto-text">
+          <b>글 길이에 맞추기</b>
+          <small>가로 고정 · 글 길이에 따라 이미지 크기가 달라져요!</small>
+        </span>
+      </button>
+
       <div class="field-group">
         <span class="label-sub">카드 전체 여백</span>
         <div class="range-row">
@@ -1787,12 +2318,14 @@
       <div class="field-group">
         <div class="seg-buttons" id="bgtype-group">
           <button data-bgtype="solid" class="on">단색</button>
+          <button data-bgtype="gradient">그라데이션</button>
+          <button data-bgtype="pattern">패턴</button>
           <button data-bgtype="image">이미지</button>
         </div>
       </div>
 
       <div class="field-group" id="solid-controls">
-        <span class="label-sub">배경 색상</span>
+        <span class="label-sub" id="solid-label">배경 색상</span>
         <div class="swatches" id="swatch-group">
           <div class="swatch-btn on" data-bg="#f6f6f6" data-ink="#1a1b1d" style="background:#f6f6f6; color:#1a1b1d;">화이트</div>
           <div class="swatch-btn" data-bg="#0a0a0b" data-ink="#f4f4f4" style="background:#0a0a0b; color:#f4f4f4;">블랙</div>
@@ -1802,6 +2335,65 @@
             <input type="color" id="in-color-picker" value="#f6f6f6" title="배경색 직접 선택">
             <input type="text" id="in-color-hex" class="color-code-input" value="#F6F6F6" maxlength="7">
           </div>
+        </div>
+      </div>
+
+      <!-- 그라데이션 -->
+      <div class="field-group" id="gradient-controls" style="display:none;">
+        <span class="label-sub">그라데이션 색상</span>
+        <div class="swatches">
+          <div class="color-picker-wrap">
+            <span class="picker-label-text">시작</span>
+            <input type="color" id="in-grad-a" value="#bfe3f8">
+            <input type="text" id="in-grad-a-hex" class="color-code-input" value="#BFE3F8" maxlength="7">
+          </div>
+          <button type="button" class="btn-mini" id="btn-grad-swap" title="시작/끝 색 바꾸기">⇄</button>
+          <div class="color-picker-wrap">
+            <span class="picker-label-text">끝</span>
+            <input type="color" id="in-grad-b" value="#f6f6f6">
+            <input type="text" id="in-grad-b-hex" class="color-code-input" value="#F6F6F6" maxlength="7">
+          </div>
+        </div>
+        <div class="seg-buttons" id="grad-type-group">
+          <button type="button" data-gtype="linear" class="on">직선</button>
+          <button type="button" data-gtype="radial">원형 (가운데부터)</button>
+        </div>
+        <div id="grad-angle-row" style="display:flex; flex-direction:column; gap:7px;">
+          <span class="label-sub">방향 (각도)</span>
+          <div class="range-row">
+            <input type="range" id="in-grad-angle" min="0" max="360" step="5" value="135">
+            <span id="grad-angle-val">135°</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 패턴 -->
+      <div class="field-group" id="pattern-controls" style="display:none;">
+        <span class="label-sub">패턴 모양</span>
+        <div class="seg-buttons" id="pat-type-group">
+          <button type="button" data-ptype="dot" class="on">도트</button>
+          <button type="button" data-ptype="check">체크</button>
+          <button type="button" data-ptype="stripe">사선</button>
+          <button type="button" data-ptype="grid">모눈</button>
+          <button type="button" data-ptype="heart">하트</button>
+        </div>
+        <span class="label-sub">패턴 색상</span>
+        <div class="swatches">
+          <div class="color-picker-wrap">
+            <span class="picker-label-text">직접 선택</span>
+            <input type="color" id="in-pat-color" value="#51aae1">
+            <input type="text" id="in-pat-color-hex" class="color-code-input" value="#51AAE1" maxlength="7">
+          </div>
+        </div>
+        <span class="label-sub">패턴 크기</span>
+        <div class="range-row">
+          <input type="range" id="in-pat-size" min="10" max="120" step="2" value="28">
+          <span id="pat-size-val">28px</span>
+        </div>
+        <span class="label-sub">패턴 진하기</span>
+        <div class="range-row">
+          <input type="range" id="in-pat-opacity" min="5" max="100" step="1" value="30">
+          <span id="pat-opacity-val">30%</span>
         </div>
       </div>
 
@@ -1845,10 +2437,36 @@
     <button class="save-btn" id="btn-save">이미지 저장</button>
   </aside>
 
-  <main class="stage">
+  <main class="stage-wrap">
+  <!-- 미리보기 보기 방식 (전체 / 가로 맞춤 / 확대·축소) -->
+  <div class="view-toolbar" id="view-toolbar">
+    <button type="button" data-view="fit" class="on" title="카드 전체를 한 화면에">⤢ 전체</button>
+    <button type="button" data-view="width" title="가로를 꽉 채우고 세로는 스크롤 (긴 이미지 편집용)">↔ 가로 맞춤</button>
+    <span class="view-sep"></span>
+    <button type="button" data-zoom="-" title="축소 (Ctrl+휠)">−</button>
+    <span class="view-pct" id="view-pct">100%</span>
+    <button type="button" data-zoom="+" title="확대 (Ctrl+휠)">＋</button>
+  </div>
+
+  <div class="stage">
     <div class="canvas-container">
       <canvas id="card-canvas"></canvas>
     </div>
+
+    <!-- 스티커 조절 테두리 (이미지 저장 시에는 안 찍힘) -->
+    <div class="sticker-overlay" id="sticker-overlay">
+      <div class="sticker-box" id="sticker-box">
+        <span class="st-handle" data-h="nw"></span>
+        <span class="st-handle" data-h="ne"></span>
+        <span class="st-handle" data-h="sw"></span>
+        <span class="st-handle" data-h="se"></span>
+        <span class="st-rotate" data-h="rot" title="돌려서 회전 (Shift: 15° 단위)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"></path><polyline points="21 3 21 9 15 9"></polyline></svg>
+        </span>
+        <button type="button" class="st-del" id="st-btn-del" title="스티커 삭제">✕</button>
+      </div>
+    </div>
+  </div>
   </main>
 
   <!-- 모바일 전용 빠른 이동 플로팅 버튼 -->
@@ -1945,9 +2563,19 @@
 
       <div class="preset-save-bar">
         <input type="text" id="in-preset-name" placeholder="프리셋 이름 (예: 퓨윳)" maxlength="16">
+        <button type="button" class="btn-preset-import" id="btn-new-folder">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+            <line x1="12" y1="10.5" x2="12" y2="15.5"></line>
+            <line x1="9.5" y1="13" x2="14.5" y2="13"></line>
+          </svg>
+        </button>
         <button type="button" class="btn-preset-add" id="btn-save-preset">프리셋 저장</button>
       </div>
-    
+
+      <!-- 폴더 이동 경로 (전체 / 폴더명) -->
+      <div class="preset-nav" id="preset-nav"></div>
+
 
       <div class="preset-grid" id="preset-grid">
         <!-- JS로 동적 생성되는 2열 프리셋 카드 -->
@@ -2084,7 +2712,17 @@
       bgImgData: null,     // 배경 이미지 Base64 저장용
       insertImgData: null,  // 본문 삽입 이미지 Base64 저장용
       currentProfileIdx: 0,
-      profiles: JSON.parse(JSON.stringify(defaultProfiles))
+      profiles: JSON.parse(JSON.stringify(defaultProfiles)),
+      stickers: [], // { id, data, aspect, x, y, w, rot, borderW, borderColor, shadow, locked }
+      chatImages: [], // { id, no, data, aspect } → 본문에 [사진no]
+      gradA: '#bfe3f8',
+      gradB: '#f6f6f6',
+      gradType: 'linear',
+      gradAngle: 135,
+      patType: 'dot',
+      patColor: '#51aae1',
+      patSize: 28,
+      patOpacity: 0.3
     };
 
     // ==========================================
@@ -2092,64 +2730,102 @@
     // ==========================================
     const STORAGE_KEY = 'uxi_card_maker_state';
 
-    function saveToStorage() {
-      // 이미지 용량이 너무 크면 스토리지 제한에 걸려 데이터가 증발하므로 임시 리사이징 압축 수행
-      const compressDataUrl = (dataUrl, maxW, maxH, callback) => {
-        if (!dataUrl) { callback(null); return; }
-        const img = new Image();
-        img.onload = () => {
-          let w = img.width, h = img.height;
-          if (w > maxW || h > maxH) {
-            if (w/h > maxW/maxH) { h = Math.round(h * maxW / w); w = maxW; }
-            else { w = Math.round(w * maxH / h); h = maxH; }
-          }
-          const canvas = document.createElement('canvas');
-          canvas.width = w; canvas.height = h;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0, w, h);
-          callback(canvas.toDataURL('image/jpeg', 0.82));
-        };
-        img.onerror = () => callback(dataUrl);
-        img.src = dataUrl;
-      };
+    // ==========================================
+    // 작업 자동저장
+    // - 글/설정값: localStorage (가벼움)
+    // - 이미지: IndexedDB (용량 넉넉함, 원본 화질 그대로)
+    //   ※ localStorage는 같은 사이트(github.io) 안의 모든 도구가 약 5MB를 나눠 써서,
+    //     다른 윳! 도구들도 이미지를 저장하면 용량이 넘쳐 이미지가 통째로 빠지던 문제 해결
+    // ==========================================
+    const AUTOSAVE_DB = 'UxiCardAutosave';
+    let autosaveDBPromise = null;
+    let lastSavedImages = null;
 
-      const dataToSave = JSON.parse(JSON.stringify(state));
-      delete dataToSave.bgImg;
-      delete dataToSave.insertImg;
-      dataToSave.profiles.forEach(p => { delete p.avatarImg; });
-
-      // 배경 및 프로필 사진 압축 후 저장 시도
-      compressDataUrl(dataToSave.bgImgData, 1000, 1000, (compBg) => {
-        if (compBg) dataToSave.bgImgData = compBg;
-        compressDataUrl(dataToSave.insertImgData, 1000, 1000, (compIns) => {
-          if (compIns) dataToSave.insertImgData = compIns;
-          
-          let profileCount = dataToSave.profiles.length;
-          let processed = 0;
-          
-          const finalizeSave = () => {
-            try {
-              localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
-            } catch (e) {
-              console.warn('스토리지 용량 초과: 이미지 데이터를 제외하고 저장합니다.', e);
-              delete dataToSave.bgImgData;
-              delete dataToSave.insertImgData;
-              dataToSave.profiles.forEach(p => { delete p.avatarData; });
-              try { localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave)); } catch(err) {}
-            }
+    function openAutosaveDB() {
+      if (!autosaveDBPromise) {
+        autosaveDBPromise = new Promise((resolve, reject) => {
+          const req = indexedDB.open(AUTOSAVE_DB, 1);
+          req.onupgradeneeded = (e) => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains('images')) db.createObjectStore('images');
           };
-
-          if (profileCount === 0) { finalizeSave(); return; }
-
-          dataToSave.profiles.forEach(p => {
-            compressDataUrl(p.avatarData, 800, 800, (compAvatar) => {
-              if (compAvatar) p.avatarData = compAvatar;
-              processed++;
-              if (processed === profileCount) finalizeSave();
-            });
-          });
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = () => { autosaveDBPromise = null; reject(req.error); };
         });
+      }
+      return autosaveDBPromise;
+    }
+
+    function sameIdData(a, b) {
+      a = a || []; b = b || [];
+      return a.length === b.length && a.every((v, i) => v.id === b[i].id && v.data === b[i].data);
+    }
+
+    function sameImages(a, b) {
+      return a && b &&
+        a.bgImgData === b.bgImgData &&
+        a.insertImgData === b.insertImgData &&
+        a.avatars.length === b.avatars.length &&
+        a.avatars.every((v, i) => v === b.avatars[i]) &&
+        sameIdData(a.stickers, b.stickers) &&
+        sameIdData(a.chatImages, b.chatImages);
+    }
+
+    async function saveAutosaveImages(imgs) {
+      if (sameImages(lastSavedImages, imgs)) return; // 이미지가 안 바뀌었으면 다시 안 씀
+      const db = await openAutosaveDB();
+      await new Promise((resolve, reject) => {
+        const tx = db.transaction('images', 'readwrite');
+        tx.objectStore('images').put(imgs, 'current');
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
       });
+      lastSavedImages = imgs;
+    }
+
+    async function loadAutosaveImages() {
+      try {
+        const db = await openAutosaveDB();
+        return await new Promise((resolve) => {
+          const req = db.transaction('images', 'readonly').objectStore('images').get('current');
+          req.onsuccess = () => resolve(req.result || null);
+          req.onerror = () => resolve(null);
+        });
+      } catch (e) {
+        return null;
+      }
+    }
+
+    async function clearAutosaveImages() {
+      lastSavedImages = null;
+      try {
+        const db = await openAutosaveDB();
+        db.transaction('images', 'readwrite').objectStore('images').delete('current');
+      } catch (e) {}
+    }
+
+    function saveToStorage() {
+      const { bgImg, insertImg, bgImgData, insertImgData, profiles, stickers, chatImages, ...rest } = state;
+
+      // 1) 글/설정값 → localStorage
+      const dataToSave = JSON.parse(JSON.stringify(rest));
+      dataToSave.profiles = profiles.map(({ avatarImg, avatarData, ...p }) => ({ ...p }));
+      dataToSave.stickers = (stickers || []).map(({ data, ...st }) => ({ ...st })); // 스티커 위치/설정만
+      dataToSave.chatImages = (chatImages || []).map(({ data, ...c }) => ({ ...c }));
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
+      } catch (e) {
+        console.warn('작업 내용 저장 실패:', e);
+      }
+
+      // 2) 이미지 → IndexedDB
+      saveAutosaveImages({
+        bgImgData: bgImgData || null,
+        insertImgData: insertImgData || null,
+        avatars: profiles.map(p => p.avatarData || null),
+        stickers: (stickers || []).map(st => ({ id: st.id, data: st.data })),
+        chatImages: (chatImages || []).map(c => ({ id: c.id, data: c.data }))
+      }).catch(err => console.warn('이미지 자동저장 실패:', err));
     }
 
     let saveTimer = null;
@@ -2200,7 +2876,7 @@
       document.getElementById('in-p-text-color').value = p.textColor;
     }
 
-    function loadFromStorage(callback) {
+    function loadFromStorage(callback, idbImages = null) {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (!saved) {
         if (callback) callback();
@@ -2208,7 +2884,29 @@
       }
       try {
         const parsed = JSON.parse(saved);
+
+        // IndexedDB에 따로 저장된 이미지 합치기 (예전 방식으로 저장된 이미지는 그대로 사용)
+        if (idbImages) {
+          if (idbImages.bgImgData) parsed.bgImgData = idbImages.bgImgData;
+          if (idbImages.insertImgData) parsed.insertImgData = idbImages.insertImgData;
+          if (Array.isArray(idbImages.avatars) && Array.isArray(parsed.profiles)) {
+            parsed.profiles.forEach((p, i) => { if (idbImages.avatars[i]) p.avatarData = idbImages.avatars[i]; });
+          }
+          if (Array.isArray(idbImages.stickers) && Array.isArray(parsed.stickers)) {
+            const dataById = new Map(idbImages.stickers.map(x => [x.id, x.data]));
+            parsed.stickers.forEach(st => { if (dataById.has(st.id)) st.data = dataById.get(st.id); });
+          }
+          if (Array.isArray(idbImages.chatImages) && Array.isArray(parsed.chatImages)) {
+            const dataById = new Map(idbImages.chatImages.map(x => [x.id, x.data]));
+            parsed.chatImages.forEach(c => { if (dataById.has(c.id)) c.data = dataById.get(c.id); });
+          }
+          lastSavedImages = idbImages;
+        }
         Object.assign(state, parsed);
+        state.stickers = (Array.isArray(state.stickers) ? state.stickers : []).filter(st => st && st.data);
+        resetStickerSelection();
+        state.chatImages = (Array.isArray(state.chatImages) ? state.chatImages : []).filter(c => c && c.data);
+        renderChatImageList();
 
         // 텍스트 필드 복원
         document.getElementById('in-text').value = state.text || '';
@@ -2285,7 +2983,7 @@
         syncGroup('font-group', 'font', state.font);
         
         // 카드 비율 상태 복원 (메인 + 추가 비율 통합 동기화)
-        document.querySelectorAll('#ratio-group button:not(#btn-ratio-expand), #ratio-extra-group button').forEach(b => {
+        document.querySelectorAll('#ratio-group button:not(#btn-ratio-expand), #ratio-extra-group button, #btn-ratio-auto').forEach(b => {
           b.classList.toggle('on', b.dataset.ratio === state.ratio);
         });
         // 만약 저장된 비율이 서브 비율(헤더/스토리/포토카드)이면 자동으로 아코디언 열어두기
@@ -2305,8 +3003,7 @@
         syncGroup('chat-theme-group', 'theme', state.chatTheme);
 
         document.getElementById('corner-icon-row').style.display = state.frameStyle === 'corner' ? 'flex' : 'none';
-        document.getElementById('solid-controls').style.display = state.bgType === 'solid' ? 'flex' : 'none';
-        document.getElementById('image-controls').style.display = state.bgType === 'image' ? 'flex' : 'none';
+        syncBgTypeUI();
 
         syncModeUI();
 
@@ -2404,6 +3101,10 @@
         // 스토리
         canvas.width = base;
         canvas.height = Math.round((base * 16) / 9);
+      } else if (state.ratio === 'auto') {
+        // 글 길이에 맞추기: 가로 고정, 세로는 측정 결과대로
+        canvas.width = base;
+        canvas.height = autoMeasuring ? AUTO_MAX_H : autoHeight;
       } else if (state.ratio === '3:4') {
         // 포토카드
         canvas.width = base;
@@ -2932,8 +3633,22 @@
             blockH = prof.showAvatar ? Math.max(contentH, avatarSize) : contentH;
           }
 
+          // [사진N] 이면 말풍선 대신 사진
+          const chatImage = findChatImage(item.text);
+          if (chatImage) {
+            const imgMaxW = (state.chatTheme === 'discord') ? Math.min(effectiveMaxW, containerW * 0.5) : maxBubbleW;
+            const sz = chatImageSize(chatImage, fontSize, imgMaxW);
+            lines.length = 0;
+            transLines = [];
+            bubbleW = sz.w;
+            bubbleH = sz.h;
+            const contentH = nameHeaderH + sz.h + (state.chatTheme === 'discord' ? 4 : 0);
+            blockH = prof.showAvatar ? Math.max(contentH, avatarSize) : contentH;
+          }
+
           blocks.push({
             type: 'message',
+            chatImage,
             prof,
             time: item.time || '오늘',
             lines,
@@ -2959,7 +3674,26 @@
 
     let lastImgBox = null;
 
+    // 글 길이에 맞추기 (자동 높이)
+    const AUTO_MIN_H = 320;
+    const AUTO_MAX_H = 4800;
+    let autoMeasuring = false;
+    let autoNeededH = 0;
+    let autoHeight = 1200;
+
     function render() {
+      if (state.ratio === 'auto') {
+        // 1단계: 아주 긴 캔버스에 그려서 필요한 높이만 재고
+        autoMeasuring = true;
+        autoNeededH = 0;
+        try { renderPass(); } finally { autoMeasuring = false; }
+        autoHeight = Math.round(Math.min(AUTO_MAX_H, Math.max(AUTO_MIN_H, autoNeededH)));
+      }
+      // 2단계: 실제 크기로 그리기
+      renderPass();
+    }
+
+    function renderPass() {
       scheduleSave();
       updateDimensions();
       clampImagePosition();
@@ -2971,7 +3705,13 @@
       }
 
       // 1. 전체 배경 렌더링
-      if (state.bgType === 'solid' || !state.bgImg) {
+      if (autoMeasuring) {
+        // 높이 측정 단계에서는 배경 생략
+      } else if (state.bgType === 'gradient') {
+        drawGradientBackground();
+      } else if (state.bgType === 'pattern') {
+        drawPatternBackground();
+      } else if (state.bgType === 'solid' || !state.bgImg) {
         ctx.fillStyle = state.bg;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
       } else if (state.bgType === 'image' && state.bgImg) {
@@ -3741,6 +4481,19 @@
                 blockH = prof.showAvatar ? Math.max(contentH, avatarSize) : contentH;
               }
 
+              // [사진N] 이면 말풍선 대신 사진
+              const chatImage = findChatImage(msgContent);
+              if (chatImage) {
+                const imgMaxW = (theme === 'discord') ? Math.min(maxBubbleW, containerW * 0.5) : maxBubbleW;
+                const sz = chatImageSize(chatImage, fs, imgMaxW);
+                lines.length = 0;
+                transLines = [];
+                bubbleW = sz.w;
+                bubbleH = sz.h;
+                const contentH = nameHeaderH + sz.h + (theme === 'discord' ? 4 : 0);
+                blockH = prof.showAvatar ? Math.max(contentH, avatarSize) : contentH;
+              }
+
               let nextIsChat = false;
               for (let n = i + 1; n < rawLines.length; n++) {
                 const nTrim = rawLines[n].trim();
@@ -3755,6 +4508,7 @@
 
               blocks.push({
                 type: 'chat',
+                chatImage,
                 prof,
                 time: msgTime,
                 lines,
@@ -3878,6 +4632,18 @@
           effectiveFontSize -= 1;
         }
 
+        if (autoMeasuring) {
+          let bodyH = layout.totalH;
+          if (imgBox) {
+            if (state.insertPos === 'top' || state.insertPos === 'bottom') {
+              bodyH = Math.max(state.insertSize + state.insertGap + layout.totalH, state.insertSize + 120);
+            } else {
+              bodyH = Math.max(layout.totalH, state.insertSize);
+            }
+          }
+          autoNeededH = state.padding * 2 + titleHeight + creditReserve + bodyH;
+        }
+
         let curRenderY = textBox.y + Math.max(0, (textBox.h - layout.totalH) / 2);
         const theme = state.chatTheme || 'kakao';
 
@@ -3960,6 +4726,10 @@
               ctx.fillText(b.time || '오늘', textLeft + nWidth + 8, curRenderY + 2);
               ctx.restore();
 
+              if (b.chatImage) {
+                drawChatImageBubble(b.chatImage, textLeft, curRenderY + b.nameHeaderH + 4, b.bubbleW, b.bubbleH, false, 8);
+              }
+
               const chatLineStep = effectiveFontSize + b.lineSpacing;
               let lineCenterY = curRenderY + b.nameHeaderH + (effectiveFontSize / 2);
 
@@ -4014,7 +4784,9 @@
                 by = curRenderY + b.nameHeaderH;
               }
 
-              if (isTerminal) {
+              if (b.chatImage) {
+                drawChatImageBubble(b.chatImage, bx, by, b.bubbleW, b.bubbleH, isTerminal);
+              } else if (isTerminal) {
                 drawRoundRect(bx, by, b.bubbleW, b.bubbleH, 0, prof.bubbleBg, hexToRgba(state.ink, 0.4), 1.5);
                 ctx.save();
                 ctx.fillStyle = state.ink;
@@ -4059,6 +4831,10 @@
           layout = layoutChatBlocks(chatItems, effFontSize, state.font, state.letterSpacing, state.lineHeightMult, contentW);
           if (layout.totalH <= workAreaH) break;
           effFontSize -= 1;
+        }
+
+        if (autoMeasuring) {
+          autoNeededH = state.padding * 2 + titleHeight + creditReserve + layout.totalH;
         }
 
         let curY = workAreaY + Math.max(0, (workAreaH - layout.totalH) / 2);
@@ -4256,6 +5032,10 @@
               ctx.textAlign = 'left';
               ctx.textBaseline = 'middle';
 
+              if (b.chatImage) {
+                drawChatImageBubble(b.chatImage, textLeft, curY + b.nameHeaderH + 4, b.bubbleW, b.bubbleH, false, 8);
+              }
+
               // 원문 렌더링
               let nextLineY = drawRunList(b.lines, textLeft, curY + b.nameHeaderH + (effFontSize / 2), effFontSize, b.lineSpacing, b.prof.textColor, 1.0);
 
@@ -4304,7 +5084,9 @@
                 by = curY + b.nameHeaderH;
               }
 
-              if (isTerminal) {
+              if (b.chatImage) {
+                drawChatImageBubble(b.chatImage, bx, by, b.bubbleW, b.bubbleH, isTerminal);
+              } else if (isTerminal) {
                 drawRoundRect(bx, by, b.bubbleW, b.bubbleH, 0, b.prof.bubbleBg, hexToRgba(state.ink, 0.4), 1.5);
                 ctx.save();
                 ctx.fillStyle = state.ink;
@@ -4393,12 +5175,19 @@
         }
         ctx.globalAlpha = 1.0;
       }
+
+      // 스티커 (맨 위에 얹기)
+      if (!autoMeasuring) {
+        drawStickers();
+        applyViewZoom();
+        updateStickerOverlay();
+      }
     }
 
     // 본문 내용 비우기
     document.getElementById('btn-clear-text').addEventListener('click', () => {
       const ta = document.getElementById('in-text');
-      ta.value = '';
+      replaceTextRange(ta, 0, ta.value.length, ''); // Ctrl+Z로 되살릴 수 있음
       state.text = '';
       ta.focus();
       render();
@@ -4443,6 +5232,20 @@
       const canvasX = (e.clientX - rect.left) * factor;
       const canvasY = (e.clientY - rect.top) * factor;
 
+      // 스티커를 눌렀으면 선택 + 이동
+      const hitSt = hitTestSticker(canvasX, canvasY);
+      if (hitSt) {
+        if (selectedStickerId !== hitSt.id) selectSticker(hitSt.id);
+        dragTarget = 'sticker';
+        isDragging = true;
+        dragStartX = e.clientX;
+        dragStartY = e.clientY;
+        initPosX = hitSt.x;
+        initPosY = hitSt.y;
+        return;
+      }
+      if (selectedStickerId) selectSticker(null);
+
       if (state.mode === 'normal' && state.showInsert && state.insertImg && isPointInBox(canvasX, canvasY, lastImgBox)) {
         dragTarget = 'insert';
         isDragging = true;
@@ -4480,12 +5283,819 @@
         state.bgPosX = initPosX + dx;
         state.bgPosY = initPosY + dy;
         render();
+      } else if (dragTarget === 'sticker') {
+        const st = getSelectedSticker();
+        if (st) {
+          st.x = initPosX + dx;
+          st.y = initPosY + dy;
+          render();
+        }
       }
     });
 
     window.addEventListener('mouseup', () => {
       isDragging = false;
       dragTarget = null;
+    });
+
+    // ==========================================
+    // 스티커 (미리보기 위에서 이동 · 크기 · 회전)
+    // ==========================================
+    const stickerImgCache = new Map();  // id → { src, img, loaded }
+    const stickerBmpCache = new Map();  // id → { key, canvas }
+    let selectedStickerId = null;
+    let stickerSeq = 0;
+
+    const STICKER_DEFAULTS = { borderW: 12, borderColor: '#ffffff', shadow: true };
+
+    function newStickerId() {
+      return 'st_' + Date.now().toString(36) + '_' + (stickerSeq++).toString(36);
+    }
+
+    function getSelectedSticker() {
+      return (state.stickers || []).find(s => s.id === selectedStickerId) || null;
+    }
+
+    function stickerHeight(st) {
+      return st.w / (st.aspect || 1);
+    }
+
+    // 이미지 로딩 (안 불러와진 스티커는 로딩 후 다시 그림)
+    function getStickerImg(st) {
+      let entry = stickerImgCache.get(st.id);
+      if (entry && entry.src === st.data) return entry.loaded ? entry.img : null;
+      const img = new Image();
+      entry = { src: st.data, img, loaded: false };
+      stickerImgCache.set(st.id, entry);
+      img.onload = () => { entry.loaded = true; render(); };
+      img.src = st.data;
+      return null;
+    }
+
+    // 테두리(이미지 외곽선을 따라가는 스티커 테두리)까지 합친 이미지를 만들어 캐시
+    function getStickerBitmap(st, img) {
+      const w = Math.max(1, Math.round(st.w));
+      const h = Math.max(1, Math.round(stickerHeight(st)));
+      const b = Math.max(0, Math.round(st.borderW || 0));
+      const key = `${st.data.length}|${w}|${h}|${b}|${st.borderColor}`;
+      const cached = stickerBmpCache.get(st.id);
+      if (cached && cached.key === key && cached.src === st.data) return cached.canvas;
+
+      const pad = b + 2;
+      const out = document.createElement('canvas');
+      out.width = w + pad * 2;
+      out.height = h + pad * 2;
+      const o = out.getContext('2d');
+      o.imageSmoothingEnabled = true;
+      o.imageSmoothingQuality = 'high';
+
+      if (b > 0) {
+        // 1) 테두리 색으로 칠한 실루엣
+        const sil = document.createElement('canvas');
+        sil.width = w;
+        sil.height = h;
+        const s = sil.getContext('2d');
+        s.drawImage(img, 0, 0, w, h);
+        s.globalCompositeOperation = 'source-in';
+        s.fillStyle = st.borderColor || '#ffffff';
+        s.fillRect(0, 0, w, h);
+
+        // 2) 실루엣을 사방으로 퍼뜨려서 두께 만들기
+        const steps = Math.min(72, Math.max(24, Math.ceil(b * 2.5)));
+        for (let i = 0; i < steps; i++) {
+          const a = (i / steps) * Math.PI * 2;
+          o.drawImage(sil, pad + Math.cos(a) * b, pad + Math.sin(a) * b);
+        }
+        // 안쪽 빈틈 메우기
+        for (let r = b * 0.5; r > 0; r -= Math.max(1, b * 0.25)) {
+          for (let i = 0; i < 16; i++) {
+            const a = (i / 16) * Math.PI * 2;
+            o.drawImage(sil, pad + Math.cos(a) * r, pad + Math.sin(a) * r);
+          }
+        }
+        o.drawImage(sil, pad, pad);
+      }
+
+      // 3) 원본 이미지
+      o.drawImage(img, pad, pad, w, h);
+
+      stickerBmpCache.set(st.id, { key, src: st.data, canvas: out });
+      return out;
+    }
+
+    function drawStickers() {
+      const list = state.stickers || [];
+      list.forEach(st => {
+        const img = getStickerImg(st);
+        if (!img) return;
+        const bmp = getStickerBitmap(st, img);
+        ctx.save();
+        ctx.translate(st.x, st.y);
+        ctx.rotate(st.rot || 0);
+        if (st.shadow) {
+          ctx.shadowColor = 'rgba(15, 23, 42, 0.28)';
+          ctx.shadowBlur = Math.max(10, st.w * 0.06);
+          ctx.shadowOffsetX = 0;
+          ctx.shadowOffsetY = Math.max(4, st.w * 0.025);
+        }
+        ctx.drawImage(bmp, -bmp.width / 2, -bmp.height / 2);
+        ctx.restore();
+      });
+    }
+
+    // 캔버스 좌표 기준 클릭한 스티커 찾기 (위에 있는 것부터)
+    function hitTestSticker(cx, cy) {
+      const list = state.stickers || [];
+      for (let i = list.length - 1; i >= 0; i--) {
+        const st = list[i];
+        if (st.locked) continue; // 잠긴 스티커는 미리보기에서 안 잡힘
+        const rot = st.rot || 0;
+        const dx = cx - st.x;
+        const dy = cy - st.y;
+        const lx = dx * Math.cos(-rot) - dy * Math.sin(-rot);
+        const ly = dx * Math.sin(-rot) + dy * Math.cos(-rot);
+        const b = st.borderW || 0;
+        if (Math.abs(lx) <= st.w / 2 + b && Math.abs(ly) <= stickerHeight(st) / 2 + b) return st;
+      }
+      return null;
+    }
+
+    function clientToCanvas(clientX, clientY) {
+      const rect = canvas.getBoundingClientRect();
+      const f = canvas.width / rect.width;
+      return { x: (clientX - rect.left) * f, y: (clientY - rect.top) * f };
+    }
+
+    // ---------- 조절 테두리 (미리보기 위 오버레이) ----------
+    const stickerOverlay = document.getElementById('sticker-overlay');
+    const stickerBox = document.getElementById('sticker-box');
+    const stageEl = document.querySelector('.stage');
+
+    function updateStickerOverlay() {
+      const st = getSelectedSticker();
+      if (!st) {
+        stickerOverlay.style.display = 'none';
+        return;
+      }
+      const cRect = canvas.getBoundingClientRect();
+      const sRect = stageEl.getBoundingClientRect();
+      if (!cRect.width) return;
+      const scale = cRect.width / canvas.width;
+      const b = st.borderW || 0;
+      const w = (st.w + b * 2) * scale;
+      const h = (stickerHeight(st) + b * 2) * scale;
+      const cx = cRect.left - sRect.left + stageEl.scrollLeft + st.x * scale;
+      const cy = cRect.top - sRect.top + stageEl.scrollTop + st.y * scale;
+
+      stickerOverlay.style.display = 'block';
+      stickerBox.style.width = w + 'px';
+      stickerBox.style.height = h + 'px';
+      stickerBox.style.left = (cx - w / 2) + 'px';
+      stickerBox.style.top = (cy - h / 2) + 'px';
+      stickerBox.style.transform = `rotate(${st.rot || 0}rad)`;
+      stickerBox.classList.toggle('locked', !!st.locked);
+    }
+
+    window.addEventListener('resize', updateStickerOverlay);
+    stageEl.addEventListener('scroll', updateStickerOverlay);
+    window.addEventListener('scroll', updateStickerOverlay, { passive: true });
+
+    function selectSticker(id) {
+      selectedStickerId = id;
+      syncStickerPanel();
+      updateStickerOverlay();
+    }
+
+    // 모서리 = 크기 / 아래 동그라미 = 회전
+    let stickerHandleDrag = null;
+
+    stickerBox.querySelectorAll('[data-h]').forEach(handle => {
+      handle.addEventListener('pointerdown', (e) => {
+        const st = getSelectedSticker();
+        if (!st || st.locked) return;
+        e.preventDefault();
+        e.stopPropagation();
+        handle.setPointerCapture(e.pointerId);
+        const p = clientToCanvas(e.clientX, e.clientY);
+        stickerHandleDrag = {
+          type: handle.dataset.h === 'rot' ? 'rot' : 'scale',
+          startDist: Math.max(1, Math.hypot(p.x - st.x, p.y - st.y)),
+          startAngle: Math.atan2(p.y - st.y, p.x - st.x),
+          startW: st.w,
+          startRot: st.rot || 0
+        };
+        document.body.classList.add(stickerHandleDrag.type === 'rot' ? 'sticker-rotating' : 'sticker-scaling');
+      });
+
+      handle.addEventListener('pointermove', (e) => {
+        const st = getSelectedSticker();
+        if (!stickerHandleDrag || !st) return;
+        const p = clientToCanvas(e.clientX, e.clientY);
+        if (stickerHandleDrag.type === 'scale') {
+          const dist = Math.hypot(p.x - st.x, p.y - st.y);
+          const minW = 40;
+          const maxW = Math.max(canvas.width, canvas.height) * 2;
+          st.w = Math.min(maxW, Math.max(minW, stickerHandleDrag.startW * (dist / stickerHandleDrag.startDist)));
+        } else {
+          let rot = stickerHandleDrag.startRot + (Math.atan2(p.y - st.y, p.x - st.x) - stickerHandleDrag.startAngle);
+          // 0° · 45° · 90° … 근처에서 살짝 달라붙기 (Shift 누르면 15° 단위)
+          const snapUnit = e.shiftKey ? Math.PI / 12 : Math.PI / 4;
+          const snapped = Math.round(rot / snapUnit) * snapUnit;
+          if (e.shiftKey || Math.abs(rot - snapped) < (3 * Math.PI / 180)) rot = snapped;
+          st.rot = rot;
+        }
+        render();
+      });
+
+      const endHandle = () => {
+        if (!stickerHandleDrag) return;
+        stickerHandleDrag = null;
+        document.body.classList.remove('sticker-rotating', 'sticker-scaling');
+        scheduleSave();
+      };
+      handle.addEventListener('pointerup', endHandle);
+      handle.addEventListener('pointercancel', endHandle);
+    });
+
+    document.getElementById('st-btn-del').addEventListener('pointerdown', (e) => e.stopPropagation());
+    document.getElementById('st-btn-del').addEventListener('click', (e) => {
+      e.stopPropagation();
+      deleteSelectedSticker();
+    });
+
+    function deleteSelectedSticker() {
+      const st = getSelectedSticker();
+      if (!st) return;
+      state.stickers = state.stickers.filter(s => s !== st);
+      stickerImgCache.delete(st.id);
+      stickerBmpCache.delete(st.id);
+      selectSticker(null);
+      render();
+    }
+
+    // 스티커 위에서 커서 모양 바꾸기
+    canvas.addEventListener('mousemove', (e) => {
+      if (isDragging) return;
+      const p = clientToCanvas(e.clientX, e.clientY);
+      canvas.style.cursor = hitTestSticker(p.x, p.y) ? 'move' : '';
+    });
+
+    // 키보드: Delete 삭제 / Esc 선택 해제 / 방향키 미세 이동
+    window.addEventListener('keydown', (e) => {
+      const tag = (e.target.tagName || '').toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || e.target.isContentEditable) return;
+      const st = getSelectedSticker();
+      if (!st) return;
+      if (st.locked && e.key !== 'Escape') return; // 잠긴 스티커는 키보드로도 안 움직임
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault();
+        deleteSelectedSticker();
+      } else if (e.key === 'Escape') {
+        selectSticker(null);
+      } else if (e.key.startsWith('Arrow')) {
+        e.preventDefault();
+        const step = e.shiftKey ? 20 : 4;
+        if (e.key === 'ArrowLeft') st.x -= step;
+        if (e.key === 'ArrowRight') st.x += step;
+        if (e.key === 'ArrowUp') st.y -= step;
+        if (e.key === 'ArrowDown') st.y += step;
+        render();
+      }
+    });
+
+    // ---------- 스티커 추가 ----------
+    // 너무 큰 사진은 가볍게 줄이기 (투명 배경 유지 위해 PNG)
+    function prepareStickerData(dataUrl, cb) {
+      const img = new Image();
+      img.onload = () => {
+        const MAX = 1600;
+        let w = img.width, h = img.height;
+        if (w <= MAX && h <= MAX) { cb(dataUrl, w, h); return; }
+        const r = Math.min(MAX / w, MAX / h);
+        w = Math.round(w * r);
+        h = Math.round(h * r);
+        const c = document.createElement('canvas');
+        c.width = w;
+        c.height = h;
+        const cx2 = c.getContext('2d');
+        cx2.imageSmoothingQuality = 'high';
+        cx2.drawImage(img, 0, 0, w, h);
+        cb(c.toDataURL('image/png'), w, h);
+      };
+      img.onerror = () => cb(null);
+      img.src = dataUrl;
+    }
+
+    document.getElementById('in-sticker-file').addEventListener('change', (e) => {
+      const files = Array.from(e.target.files || []);
+      files.forEach((file, idx) => {
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          prepareStickerData(evt.target.result, (data, iw, ih) => {
+            if (!data) return;
+            const last = getSelectedSticker();
+            const base = last || STICKER_DEFAULTS;
+            const count = (state.stickers || []).length;
+            const w = Math.min(canvas.width, canvas.height) * 0.38;
+            const st = {
+              id: newStickerId(),
+              data,
+              aspect: iw / ih,
+              x: canvas.width / 2 + ((count % 5) - 2) * 36,
+              y: canvas.height / 2 + ((count % 5) - 2) * 36,
+              w,
+              rot: 0,
+              borderW: base.borderW,
+              borderColor: base.borderColor,
+              shadow: base.shadow
+            };
+            if (!Array.isArray(state.stickers)) state.stickers = [];
+            state.stickers.push(st);
+            selectSticker(st.id);
+            render();
+          });
+        };
+        reader.readAsDataURL(file);
+      });
+      e.target.value = '';
+    });
+
+    // ---------- 왼쪽 패널 (선택한 스티커 설정) ----------
+    const stBorderRange = document.getElementById('in-st-border');
+    const stBorderVal = document.getElementById('st-border-val');
+    const stColorPicker = document.getElementById('in-st-color');
+    const stColorHex = document.getElementById('in-st-color-hex');
+    const stShadowTog = document.getElementById('tog-st-shadow');
+
+    function syncStickerPanel() {
+      const st = getSelectedSticker();
+      const count = (state.stickers || []).length;
+      document.getElementById('sticker-controls').style.display = st ? 'flex' : 'none';
+      document.getElementById('sticker-empty-tip').style.display = st ? 'none' : 'block';
+      document.getElementById('sticker-empty-tip').innerText = count
+        ? `스티커 ${count}개 ✦ 아래 목록이나 미리보기에서 눌러 선택하기`
+        : '아직 올린 스티커가 없어요ㅜㅅㅜ';
+
+      // 스티커 목록 (잠긴 스티커도 여기서 골라서 풀 수 있음) — 맨 앞에 있는 것부터
+      const listEl = document.getElementById('sticker-list');
+      listEl.innerHTML = '';
+      listEl.style.display = count ? 'flex' : 'none';
+      [...(state.stickers || [])].reverse().forEach(item => {
+        const el = document.createElement('div');
+        el.className = 'thumb-item' + (item.id === selectedStickerId ? ' on' : '');
+        el.title = item.locked ? '잠긴 스티커 (눌러서 선택)' : '눌러서 선택';
+        el.innerHTML = `<img src="${item.data}" alt="">${item.locked ? '<span class="thumb-lock">🔒</span>' : ''}`;
+        el.addEventListener('click', () => selectSticker(item.id === selectedStickerId ? null : item.id));
+        listEl.appendChild(el);
+      });
+
+      if (!st) return;
+      document.getElementById('st-btn-lock').innerText = st.locked ? '🔓 해제' : '🔒 잠금';
+      document.getElementById('st-btn-lock').classList.toggle('on', !!st.locked);
+      stBorderRange.value = st.borderW;
+      stBorderVal.innerText = `${st.borderW}px`;
+      updateRangeProgress(stBorderRange);
+      stColorPicker.value = st.borderColor;
+      stColorHex.value = st.borderColor.toUpperCase();
+      stShadowTog.classList.toggle('on', !!st.shadow);
+    }
+
+    stBorderRange.addEventListener('input', (e) => {
+      const st = getSelectedSticker();
+      if (!st) return;
+      st.borderW = parseInt(e.target.value, 10);
+      stBorderVal.innerText = `${st.borderW}px`;
+      render();
+    });
+
+    stColorPicker.addEventListener('input', (e) => {
+      const st = getSelectedSticker();
+      if (!st) return;
+      st.borderColor = e.target.value;
+      stColorHex.value = e.target.value.toUpperCase();
+      render();
+    });
+
+    stColorHex.addEventListener('input', (e) => {
+      let hex = e.target.value;
+      if (!hex.startsWith('#')) hex = '#' + hex;
+      const st = getSelectedSticker();
+      if (st && /^#[0-9A-Fa-f]{6}$/.test(hex)) {
+        st.borderColor = hex.toLowerCase();
+        stColorPicker.value = hex;
+        render();
+      }
+    });
+
+    stShadowTog.addEventListener('click', () => {
+      const st = getSelectedSticker();
+      if (!st) return;
+      st.shadow = !st.shadow;
+      stShadowTog.classList.toggle('on', st.shadow);
+      render();
+    });
+
+    document.getElementById('st-layer-group').addEventListener('click', (e) => {
+      const btn = e.target.closest('button');
+      const st = getSelectedSticker();
+      if (!btn || !st) return;
+      const list = state.stickers;
+      const i = list.indexOf(st);
+      const act = btn.dataset.act;
+      if (act === 'lock') {
+        st.locked = !st.locked;
+        syncStickerPanel();
+        updateStickerOverlay();
+        render();
+        return;
+      }
+      if (act === 'front' && i < list.length - 1) { list.splice(i, 1); list.push(st); }
+      else if (act === 'back' && i > 0) { list.splice(i, 1); list.unshift(st); }
+      else if (act === 'dup') {
+        const copy = { ...st, id: newStickerId(), x: st.x + 36, y: st.y + 36, locked: false };
+        list.push(copy);
+        selectSticker(copy.id);
+      }
+      else if (act === 'del') { deleteSelectedSticker(); return; }
+      syncStickerPanel();
+      render();
+    });
+
+    // 프리셋/작업 복원으로 스티커 목록이 통째로 바뀔 때
+    function resetStickerSelection() {
+      selectedStickerId = null;
+      stickerBmpCache.clear();
+      syncStickerPanel();
+      updateStickerOverlay();
+    }
+
+    // ==========================================
+    // 채팅 이미지 메시지 ([1] [사진1])
+    // ==========================================
+    const chatImgCache = new Map(); // id → { src, img, loaded }
+
+    function getChatImg(ci) {
+      let entry = chatImgCache.get(ci.id);
+      if (entry && entry.src === ci.data) return entry.loaded ? entry.img : null;
+      const img = new Image();
+      entry = { src: ci.data, img, loaded: false };
+      chatImgCache.set(ci.id, entry);
+      img.onload = () => { entry.loaded = true; render(); };
+      img.src = ci.data;
+      return null;
+    }
+
+    // 메시지 내용이 [사진N] (또는 [imgN]) 하나뿐이면 이미지 메시지
+    function findChatImage(text) {
+      const m = String(text || '').trim().match(/^\[(?:사진|img)\s*(\d+)\]$/i);
+      if (!m) return null;
+      const no = parseInt(m[1], 10);
+      return (state.chatImages || []).find(c => c.no === no) || null;
+    }
+
+    // 글자 크기에 비례해서 최대 높이를 정해서, 글이 많아 자동 축소될 때 사진도 같이 줄어듦
+    function chatImageSize(ci, fs, maxW) {
+      const maxH = fs * 16;
+      const w = Math.max(20, Math.min(maxW, maxH * (ci.aspect || 1)));
+      return { w, h: w / (ci.aspect || 1) };
+    }
+
+    function drawChatImageBubble(ci, x, y, w, h, terminal, radius) {
+      const r = radius ?? (terminal ? 0 : 14);
+      const img = getChatImg(ci);
+      if (img) {
+        drawCoverImage(img, x, y, w, h, r, terminal ? hexToRgba(state.ink, 0.4) : 'rgba(0,0,0,0.08)', terminal ? 1.5 : 1);
+      } else {
+        drawRoundRect(x, y, w, h, r, 'rgba(148, 163, 184, 0.25)', null, 0);
+      }
+    }
+
+    function renderChatImageList() {
+      const wrap = document.getElementById('chat-img-list');
+      const list = state.chatImages || [];
+      wrap.innerHTML = '';
+      wrap.style.display = list.length ? 'flex' : 'none';
+      list.forEach(ci => {
+        const item = document.createElement('div');
+        item.className = 'thumb-item';
+        item.title = `눌러서 [사진${ci.no}] 넣기`;
+        item.innerHTML = `
+          <img src="${ci.data}" alt="">
+          <span class="thumb-badge">사진${ci.no}</span>
+          <button type="button" class="thumb-del" title="사진 삭제">✕</button>
+        `;
+        item.addEventListener('mousedown', (e) => e.preventDefault()); // 본문 커서 위치 유지
+        item.addEventListener('click', (e) => {
+          if (e.target.closest('.thumb-del')) return;
+          // 지금 선택된 프로필 번호로 삽입 (채팅 모드 P1~P6 탭)
+          insertSnippet(`[${(state.currentProfileIdx || 0) + 1}] [사진${ci.no}]`);
+        });
+        item.querySelector('.thumb-del').addEventListener('click', (e) => {
+          e.stopPropagation();
+          state.chatImages = state.chatImages.filter(c => c !== ci);
+          chatImgCache.delete(ci.id);
+          renderChatImageList();
+          render();
+        });
+        wrap.appendChild(item);
+      });
+    }
+
+    document.getElementById('in-chat-img-file').addEventListener('change', (e) => {
+      const files = Array.from(e.target.files || []);
+      files.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          prepareStickerData(evt.target.result, (data, iw, ih) => {
+            if (!data) return;
+            if (!Array.isArray(state.chatImages)) state.chatImages = [];
+            const no = state.chatImages.reduce((m, c) => Math.max(m, c.no || 0), 0) + 1;
+            state.chatImages.push({ id: newStickerId(), no, data, aspect: iw / ih });
+            renderChatImageList();
+            render();
+          });
+        };
+        reader.readAsDataURL(file);
+      });
+      e.target.value = '';
+    });
+
+    // ==========================================
+    // 배경: 그라데이션 / 패턴
+    // ==========================================
+    function drawGradientBackground() {
+      const W = canvas.width, H = canvas.height;
+      let g;
+      if (state.gradType === 'radial') {
+        g = ctx.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, Math.hypot(W, H) / 2);
+      } else {
+        const a = (state.gradAngle ?? 135) * Math.PI / 180;
+        const dx = Math.sin(a), dy = -Math.cos(a);
+        const L = (Math.abs(W * dx) + Math.abs(H * dy)) / 2;
+        g = ctx.createLinearGradient(W / 2 - dx * L, H / 2 - dy * L, W / 2 + dx * L, H / 2 + dy * L);
+      }
+      g.addColorStop(0, state.gradA || '#bfe3f8');
+      g.addColorStop(1, state.gradB || '#f6f6f6');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    function heartPath(x, y, r) {
+      ctx.beginPath();
+      ctx.moveTo(x, y + r * 0.9);
+      ctx.bezierCurveTo(x - r * 1.6, y - r * 0.2, x - r * 0.6, y - r * 1.3, x, y - r * 0.45);
+      ctx.bezierCurveTo(x + r * 0.6, y - r * 1.3, x + r * 1.6, y - r * 0.2, x, y + r * 0.9);
+      ctx.fill();
+    }
+
+    function drawPatternBackground() {
+      const W = canvas.width, H = canvas.height;
+      const s = Math.max(6, state.patSize || 28);
+      ctx.fillStyle = state.bg;
+      ctx.fillRect(0, 0, W, H);
+
+      ctx.save();
+      ctx.globalAlpha = state.patOpacity ?? 0.3;
+      ctx.fillStyle = state.patColor || '#51aae1';
+      ctx.strokeStyle = state.patColor || '#51aae1';
+      const type = state.patType || 'dot';
+
+      if (type === 'dot') {
+        let row = 0;
+        for (let y = s / 2; y < H + s; y += s, row++) {
+          const off = (row % 2) ? s / 2 : 0;
+          for (let x = s / 2 - off; x < W + s; x += s) {
+            ctx.beginPath();
+            ctx.arc(x, y, s * 0.16, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      } else if (type === 'check') {
+        for (let j = 0; j * s < H; j++) {
+          for (let i = 0; i * s < W; i++) {
+            if ((i + j) % 2 === 0) ctx.fillRect(i * s, j * s, s, s);
+          }
+        }
+      } else if (type === 'stripe') {
+        const D = Math.hypot(W, H);
+        ctx.translate(W / 2, H / 2);
+        ctx.rotate(-Math.PI / 4);
+        for (let x = -D; x < D; x += s) ctx.fillRect(x, -D, s / 2, D * 2);
+      } else if (type === 'grid') {
+        ctx.lineWidth = Math.max(1, s * 0.05);
+        ctx.beginPath();
+        for (let x = 0; x <= W; x += s) { ctx.moveTo(x + 0.5, 0); ctx.lineTo(x + 0.5, H); }
+        for (let y = 0; y <= H; y += s) { ctx.moveTo(0, y + 0.5); ctx.lineTo(W, y + 0.5); }
+        ctx.stroke();
+      } else if (type === 'heart') {
+        const gap = s * 1.6;
+        let row = 0;
+        for (let y = gap / 2; y < H + gap; y += gap, row++) {
+          const off = (row % 2) ? gap / 2 : 0;
+          for (let x = gap / 2 - off; x < W + gap; x += gap) heartPath(x, y, s * 0.32);
+        }
+      }
+      ctx.restore();
+    }
+
+    function bindColorPair(pickerId, hexId, key) {
+      const picker = document.getElementById(pickerId);
+      const hex = document.getElementById(hexId);
+      picker.addEventListener('input', (e) => {
+        state[key] = e.target.value;
+        hex.value = e.target.value.toUpperCase();
+        render();
+      });
+      hex.addEventListener('input', (e) => {
+        let v = e.target.value;
+        if (!v.startsWith('#')) v = '#' + v;
+        if (/^#[0-9A-Fa-f]{6}$/.test(v)) {
+          state[key] = v.toLowerCase();
+          picker.value = v;
+          render();
+        }
+      });
+    }
+    bindColorPair('in-grad-a', 'in-grad-a-hex', 'gradA');
+    bindColorPair('in-grad-b', 'in-grad-b-hex', 'gradB');
+    bindColorPair('in-pat-color', 'in-pat-color-hex', 'patColor');
+
+    document.getElementById('grad-type-group').addEventListener('click', (e) => {
+      const btn = e.target.closest('button');
+      if (!btn) return;
+      state.gradType = btn.dataset.gtype;
+      syncBgTypeUI();
+      render();
+    });
+
+    document.getElementById('btn-grad-swap').addEventListener('click', () => {
+      [state.gradA, state.gradB] = [state.gradB, state.gradA];
+      syncBgTypeUI();
+      render();
+    });
+
+    document.getElementById('in-grad-angle').addEventListener('input', (e) => {
+      state.gradAngle = parseInt(e.target.value, 10);
+      document.getElementById('grad-angle-val').innerText = `${state.gradAngle}°`;
+      render();
+    });
+
+    document.getElementById('pat-type-group').addEventListener('click', (e) => {
+      const btn = e.target.closest('button');
+      if (!btn) return;
+      state.patType = btn.dataset.ptype;
+      syncBgTypeUI();
+      render();
+    });
+
+    document.getElementById('in-pat-size').addEventListener('input', (e) => {
+      state.patSize = parseInt(e.target.value, 10);
+      document.getElementById('pat-size-val').innerText = `${state.patSize}px`;
+      render();
+    });
+
+    document.getElementById('in-pat-opacity').addEventListener('input', (e) => {
+      state.patOpacity = parseInt(e.target.value, 10) / 100;
+      document.getElementById('pat-opacity-val').innerText = `${e.target.value}%`;
+      render();
+    });
+
+    // 배경 종류에 맞춰 패널 보이기 + 값 동기화
+    function syncBgTypeUI() {
+      const t = state.bgType;
+      document.getElementById('solid-controls').style.display = (t === 'solid' || t === 'pattern') ? 'flex' : 'none';
+      document.getElementById('gradient-controls').style.display = t === 'gradient' ? 'flex' : 'none';
+      document.getElementById('pattern-controls').style.display = t === 'pattern' ? 'flex' : 'none';
+      document.getElementById('image-controls').style.display = t === 'image' ? 'flex' : 'none';
+      document.getElementById('solid-label').innerText = t === 'pattern' ? '바탕 색상' : '배경 색상';
+
+      const setPair = (pickerId, hexId, val) => {
+        document.getElementById(pickerId).value = val;
+        document.getElementById(hexId).value = val.toUpperCase();
+      };
+      setPair('in-grad-a', 'in-grad-a-hex', state.gradA || '#bfe3f8');
+      setPair('in-grad-b', 'in-grad-b-hex', state.gradB || '#f6f6f6');
+      setPair('in-pat-color', 'in-pat-color-hex', state.patColor || '#51aae1');
+
+      document.querySelectorAll('#grad-type-group button').forEach(b => b.classList.toggle('on', b.dataset.gtype === (state.gradType || 'linear')));
+      document.querySelectorAll('#pat-type-group button').forEach(b => b.classList.toggle('on', b.dataset.ptype === (state.patType || 'dot')));
+      document.getElementById('grad-angle-row').style.display = state.gradType === 'radial' ? 'none' : 'flex';
+
+      const setRange = (id, valId, v, text) => {
+        const el = document.getElementById(id);
+        el.value = v;
+        document.getElementById(valId).innerText = text;
+        updateRangeProgress(el);
+      };
+      setRange('in-grad-angle', 'grad-angle-val', state.gradAngle ?? 135, `${state.gradAngle ?? 135}°`);
+      setRange('in-pat-size', 'pat-size-val', state.patSize || 28, `${state.patSize || 28}px`);
+      const op = Math.round((state.patOpacity ?? 0.3) * 100);
+      setRange('in-pat-opacity', 'pat-opacity-val', op, `${op}%`);
+    }
+
+
+    // ==========================================
+    // 미리보기 보기 방식: 전체 / 가로 맞춤 / 확대·축소
+    // (화면에 보이는 크기만 바뀌고, 저장되는 이미지는 그대로)
+    // ==========================================
+    const VIEW_KEY = 'uxi_card_view';
+    const ZOOM_STEPS = [10, 15, 20, 25, 33, 50, 67, 75, 100, 125, 150, 200];
+    const view = { mode: 'fit', pct: 50 };
+    try {
+      const saved = JSON.parse(localStorage.getItem(VIEW_KEY) || 'null');
+      if (saved && ['fit', 'width', 'pct'].includes(saved.mode)) Object.assign(view, saved);
+    } catch (e) {}
+
+    function saveView() {
+      try { localStorage.setItem(VIEW_KEY, JSON.stringify(view)); } catch (e) {}
+    }
+
+    function applyViewZoom() {
+      const zoomed = view.mode !== 'fit';
+      stageEl.classList.toggle('zoomed', zoomed);
+      if (!zoomed) {
+        canvas.style.width = '';
+        canvas.style.height = '';
+      } else {
+        let cssW;
+        if (view.mode === 'width') {
+          const cs = getComputedStyle(stageEl);
+          const padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+          const scrollbar = stageEl.offsetWidth - stageEl.clientWidth;
+          cssW = Math.max(120, stageEl.clientWidth - padX - (scrollbar ? 0 : 12));
+        } else {
+          cssW = canvas.width * view.pct / 100;
+        }
+        canvas.style.width = cssW + 'px';
+        canvas.style.height = (cssW * canvas.height / canvas.width) + 'px';
+      }
+      document.querySelectorAll('#view-toolbar [data-view]').forEach(b => {
+        b.classList.toggle('on', b.dataset.view === view.mode);
+      });
+      const shown = canvas.getBoundingClientRect().width;
+      document.getElementById('view-pct').innerText = shown ? `${Math.round(shown / canvas.width * 100)}%` : '';
+    }
+
+    function currentPct() {
+      const w = canvas.getBoundingClientRect().width;
+      return w ? (w / canvas.width) * 100 : 100;
+    }
+
+    // 확대·축소할 때 기준점(마우스 위치 / 화면 가운데)이 제자리에 있도록 스크롤 보정
+    function zoomTo(pct, clientX, clientY) {
+      const before = canvas.getBoundingClientRect();
+      const sRect = stageEl.getBoundingClientRect();
+      const ax = clientX ?? (sRect.left + sRect.width / 2);
+      const ay = clientY ?? (sRect.top + sRect.height / 2);
+      const fx = before.width ? (ax - before.left) / before.width : 0.5;
+      const fy = before.height ? (ay - before.top) / before.height : 0.5;
+
+      view.mode = 'pct';
+      view.pct = Math.min(ZOOM_STEPS[ZOOM_STEPS.length - 1], Math.max(ZOOM_STEPS[0], pct));
+      applyViewZoom();
+
+      const after = canvas.getBoundingClientRect();
+      stageEl.scrollLeft += (after.left + fx * after.width) - ax;
+      stageEl.scrollTop += (after.top + fy * after.height) - ay;
+      updateStickerOverlay();
+      saveView();
+    }
+
+    function stepZoom(dir, clientX, clientY) {
+      const cur = currentPct();
+      let next;
+      if (dir > 0) next = ZOOM_STEPS.find(z => z > cur + 0.5) ?? ZOOM_STEPS[ZOOM_STEPS.length - 1];
+      else next = [...ZOOM_STEPS].reverse().find(z => z < cur - 0.5) ?? ZOOM_STEPS[0];
+      zoomTo(next, clientX, clientY);
+    }
+
+    document.getElementById('view-toolbar').addEventListener('click', (e) => {
+      const btn = e.target.closest('button');
+      if (!btn) return;
+      if (btn.dataset.view) {
+        view.mode = btn.dataset.view;
+        applyViewZoom();
+        if (view.mode !== 'fit') stageEl.scrollTop = 0;
+        updateStickerOverlay();
+        saveView();
+      } else if (btn.dataset.zoom) {
+        stepZoom(btn.dataset.zoom === '+' ? 1 : -1);
+      }
+    });
+
+    // Ctrl(⌘) + 마우스 휠 = 확대·축소 (마우스 위치 기준)
+    stageEl.addEventListener('wheel', (e) => {
+      if (!(e.ctrlKey || e.metaKey)) return;
+      e.preventDefault();
+      stepZoom(e.deltaY < 0 ? 1 : -1, e.clientX, e.clientY);
+    }, { passive: false });
+
+    // 창 크기가 바뀌면 '가로 맞춤' 다시 계산
+    window.addEventListener('resize', () => {
+      if (view.mode === 'width') {
+        applyViewZoom();
+        updateStickerOverlay();
+      }
     });
 
     // ==========================================
@@ -4503,6 +6113,20 @@
     document.querySelectorAll('.fmt-toolbar-standalone button, .fmt-toolbar-standalone label').forEach(btn => {
       btn.addEventListener('mousedown', (e) => e.preventDefault());
     });
+
+    // 텍스트 교체를 브라우저 편집 기록에 남겨서 Ctrl+Z / Ctrl+Shift+Z 가 되게 함
+    function replaceTextRange(ta, start, end, text) {
+      ta.focus();
+      ta.setSelectionRange(start, end);
+      let ok = false;
+      try {
+        ok = text ? document.execCommand('insertText', false, text) : document.execCommand('delete');
+      } catch (e) { ok = false; }
+      if (!ok) {
+        ta.setRangeText(text, start, end, 'end');
+        ta.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+    }
 
     function toggleFormat(type, param = null) {
       const ta = lastActiveTextInput || document.getElementById('in-text');
@@ -4528,7 +6152,7 @@
 
         const insertText = `${prefix}${placeholder}${suffix}`;
         
-        ta.value = val.substring(0, start) + insertText + val.substring(end);
+        replaceTextRange(ta, start, end, insertText);
         ta.selectionStart = start + prefix.length;
         ta.selectionEnd = start + prefix.length + placeholder.length;
         
@@ -4618,7 +6242,7 @@
         }
       }
 
-      ta.value = val.substring(0, start) + newSel + val.substring(end);
+      replaceTextRange(ta, start, end, newSel);
       ta.selectionStart = start;
       ta.selectionEnd = start + newSel.length;
 
@@ -4629,6 +6253,32 @@
       ta.focus();
       render();
     }
+
+    // PC 단축키: Ctrl(⌘)+B 굵게 / I 기울임 / U 밑줄 / Shift+X 취소선 / Shift+H 형광펜
+    // (되돌리기 Ctrl+Z, 다시하기 Ctrl+Shift+Z · Ctrl+Y 는 브라우저 기본 기능으로 동작)
+    ['in-text', 'in-title', 'in-subtitle'].forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.addEventListener('keydown', (e) => {
+        if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+        let action = null;
+        // e.code 사용: 한글 입력 상태에서도 동작
+        if (!e.shiftKey && e.code === 'KeyB') action = ['bold'];
+        else if (!e.shiftKey && e.code === 'KeyI') action = ['italic'];
+        else if (!e.shiftKey && e.code === 'KeyU') action = ['underline'];
+        else if (e.shiftKey && e.code === 'KeyX') action = ['strike'];
+        else if (e.shiftKey && e.code === 'KeyH') action = ['mark', state.hlColors[state.curHlSlot]];
+        if (!action) return;
+        e.preventDefault();
+        lastActiveTextInput = el;
+        if (e.isComposing) {
+          // 한글 조합 중이면 조합이 끝난 직후에 적용
+          el.addEventListener('compositionend', () => setTimeout(() => toggleFormat(...action), 0), { once: true });
+          return;
+        }
+        toggleFormat(...action);
+      });
+    });
 
     // 툴바 버튼 이벤트 바인딩
     document.getElementById('fmt-bold').addEventListener('click', () => toggleFormat('bold'));
@@ -4705,7 +6355,7 @@
         ? lines.map(line => line.replace(/^> ?/, '')).join('\n')
         : lines.map(line => line.startsWith('> ') ? line : (line.startsWith('>') ? '> ' + line.slice(1) : '> ' + line)).join('\n');
 
-      ta.value = val.slice(0, lineStart) + transformed + val.slice(lineEnd);
+      replaceTextRange(ta, lineStart, lineEnd, transformed);
       state.text = ta.value;
 
       const delta = transformed.length - selected.length;
@@ -4726,7 +6376,7 @@
       const prefix = (start > 0 && val[start - 1] !== '\n') ? '\n' : '';
       const suffix = (end < val.length && val[end] !== '\n') ? '\n' : '';
       const insert = `${prefix}${snippet}${suffix}`;
-      ta.value = val.substring(0, start) + insert + val.substring(end);
+      replaceTextRange(ta, start, end, insert);
       ta.selectionStart = ta.selectionEnd = start + insert.length;
       state.text = ta.value;
       ta.focus();
@@ -4978,7 +6628,7 @@
       if (!targetBtn || targetBtn.id === 'btn-ratio-expand') return;
 
       // 전체 버튼 활성화 상태 갱신
-      document.querySelectorAll('#ratio-group button:not(#btn-ratio-expand), #ratio-extra-group button').forEach(b => {
+      document.querySelectorAll('#ratio-group button:not(#btn-ratio-expand), #ratio-extra-group button, #btn-ratio-auto').forEach(b => {
         b.classList.remove('on');
       });
       targetBtn.classList.add('on');
@@ -4990,6 +6640,10 @@
     document.getElementById('ratio-group').addEventListener('click', (e) => {
       const btn = e.target.closest('button');
       if (btn) selectRatio(btn);
+    });
+
+    document.getElementById('btn-ratio-auto').addEventListener('click', (e) => {
+      selectRatio(e.currentTarget);
     });
 
     document.getElementById('ratio-extra-group').addEventListener('click', (e) => {
@@ -5043,8 +6697,7 @@
       e.target.classList.add('on');
       state.bgType = e.target.dataset.bgtype;
 
-      document.getElementById('solid-controls').style.display = state.bgType === 'solid' ? 'flex' : 'none';
-      document.getElementById('image-controls').style.display = state.bgType === 'image' ? 'flex' : 'none';
+      syncBgTypeUI();
       render();
     });
 
@@ -5251,9 +6904,9 @@
 
     if (btnDown) {
       btnDown.addEventListener('click', () => {
-        const stage = document.querySelector('.stage');
+        const stage = document.querySelector('.stage-wrap');
         if (stage) {
-          const targetY = stage.offsetTop;
+          const targetY = stage.getBoundingClientRect().top + window.scrollY;
           window.scrollTo({ top: targetY, behavior: 'smooth' });
           document.documentElement.scrollTo({ top: targetY, behavior: 'smooth' });
           document.body.scrollTo({ top: targetY, behavior: 'smooth' });
@@ -5273,14 +6926,17 @@
 
         document.getElementById('btn-restore-confirm').onclick = () => {
           modal.style.display = 'none';
-          loadFromStorage(() => {
-            render();
+          loadAutosaveImages().then(imgs => {
+            loadFromStorage(() => {
+              render();
+            }, imgs);
           });
         };
 
         document.getElementById('btn-restore-cancel').onclick = () => {
           modal.style.display = 'none';
           localStorage.removeItem(STORAGE_KEY);
+          clearAutosaveImages();
           state.text = '내용을 입력하세요! ( _ _)♡';
           document.getElementById('in-text').value = state.text;
           state.title = '';
@@ -5291,6 +6947,10 @@
           state.bgImgData = null;
           state.insertImg = null;
           state.insertImgData = null;
+          state.stickers = [];
+          resetStickerSelection();
+          state.chatImages = [];
+          renderChatImageList();
           document.getElementById('file-name').innerText = '＋ 배경 파일 선택';
           document.getElementById('insert-file-name').innerText = '＋ 이미지 선택';
 
@@ -5355,8 +7015,13 @@
     // 프리셋 보관함 (IndexedDB 고화질 무손실 저장)
     // ==========================================
     const DB_NAME = 'UxiCardDB';
-    const DB_VERSION = 1;
+    const DB_VERSION = 2; // v2: 폴더 저장소 추가 (기존 프리셋은 그대로 유지됨)
     const STORE_NAME = 'presets';
+    const FOLDER_STORE = 'folders';
+
+    let currentFolderId = null; // null = 전체(최상위)
+    let presetCache = [];
+    let folderCache = [];
 
     function openPresetDB() {
       return new Promise((resolve, reject) => {
@@ -5366,116 +7031,524 @@
           if (!db.objectStoreNames.contains(STORE_NAME)) {
             db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
           }
+          if (!db.objectStoreNames.contains(FOLDER_STORE)) {
+            db.createObjectStore(FOLDER_STORE, { keyPath: 'id', autoIncrement: true });
+          }
         };
         req.onsuccess = () => resolve(req.result);
         req.onerror = () => reject(req.error);
       });
     }
 
-    async function getPresetsFromStorage() {
+    async function dbGetAll(storeName) {
       const db = await openPresetDB();
       return new Promise((resolve, reject) => {
-        const tx = db.transaction(STORE_NAME, 'readonly');
-        const store = tx.objectStore(STORE_NAME);
-        const req = store.getAll();
-        req.onsuccess = () => {
-          const list = req.result || [];
-          list.sort((a, b) => b.createdAt - a.createdAt);
-          resolve(list);
-        };
+        const req = db.transaction(storeName, 'readonly').objectStore(storeName).getAll();
+        req.onsuccess = () => resolve(req.result || []);
         req.onerror = () => reject(req.error);
       });
     }
 
-    async function deletePresetFromStorage(id) {
+    async function dbPutMany(storeName, items) {
+      if (!items.length) return;
       const db = await openPresetDB();
       return new Promise((resolve, reject) => {
-        const tx = db.transaction(STORE_NAME, 'readwrite');
-        const store = tx.objectStore(STORE_NAME);
-        const req = store.delete(id);
-        req.onsuccess = () => resolve();
-        req.onerror = () => reject(req.error);
+        const tx = db.transaction(storeName, 'readwrite');
+        const store = tx.objectStore(storeName);
+        items.forEach(item => store.put(item));
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
       });
+    }
+
+    async function dbAdd(storeName, item) {
+      const db = await openPresetDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(storeName, 'readwrite');
+        const req = tx.objectStore(storeName).add(item);
+        tx.oncomplete = () => resolve(req.result);
+        tx.onerror = () => reject(tx.error);
+      });
+    }
+
+    async function dbDelete(storeName, id) {
+      const db = await openPresetDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(storeName, 'readwrite');
+        tx.objectStore(storeName).delete(id);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+    }
+
+    // 순서(order) 기준 정렬 + 번호 정리 (예전 프리셋은 기존처럼 최신순으로 번호 부여)
+    async function loadOrdered(storeName) {
+      const list = await dbGetAll(storeName);
+      list.sort((a, b) => {
+        const ha = typeof a.order === 'number';
+        const hb = typeof b.order === 'number';
+        if (ha && hb) return a.order - b.order;
+        if (ha !== hb) return ha ? 1 : -1;
+        return (b.createdAt || 0) - (a.createdAt || 0);
+      });
+      const changed = [];
+      list.forEach((item, i) => {
+        if (item.order !== i) { item.order = i; changed.push(item); }
+      });
+      await dbPutMany(storeName, changed);
+      return list;
+    }
+
+    async function getPresetsFromStorage() { return loadOrdered(STORE_NAME); }
+    async function getFoldersFromStorage() { return loadOrdered(FOLDER_STORE); }
+    async function deletePresetFromStorage(id) { return dbDelete(STORE_NAME, id); }
+
+    function escapeHtml(str) {
+      return String(str ?? '').replace(/[&<>"']/g, c => (
+        { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+      ));
+    }
+
+    const FOLDER_SVG = `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" fill="rgba(81,170,225,0.15)"></path>
+      </svg>`;
+
+    function addSectionLabel(grid, text) {
+      const el = document.createElement('div');
+      el.className = 'preset-section-label';
+      el.textContent = text;
+      grid.appendChild(el);
+    }
+
+    function renderPresetNav() {
+      const nav = document.getElementById('preset-nav');
+      const nameInput = document.getElementById('in-preset-name');
+      const hint = '<span class="preset-nav-hint">끌어서 순서 변경 · 폴더 이동</span>';
+      const folder = folderCache.find(f => f.id === currentFolderId);
+
+      if (!folder) {
+        nav.innerHTML = `<span class="preset-nav-crumb current">전체</span>${hint}`;
+        nameInput.placeholder = '프리셋 이름 (예: 퓨윳)';
+        return;
+      }
+
+      nav.innerHTML = `
+        <button type="button" class="preset-nav-crumb" id="btn-preset-back" data-kind="root-drop" title="전체로 돌아가기 (여기로 끌어 놓으면 폴더에서 꺼내기)">‹ 전체</button>
+        <span class="preset-nav-sep">/</span>
+        <span class="preset-nav-crumb current" title="${escapeHtml(folder.name)}">${escapeHtml(folder.name)}</span>
+        ${hint}`;
+      nameInput.placeholder = `'${folder.name}' 폴더에 저장할 이름`;
+      document.getElementById('btn-preset-back').addEventListener('click', () => {
+        currentFolderId = null;
+        renderPresetList();
+      });
+    }
+
+    function createPresetCard(preset, listKey) {
+      const card = document.createElement('div');
+      card.className = 'preset-item-card' + (preset.favorite ? ' is-fav' : '');
+      card.dataset.kind = 'preset';
+      card.dataset.id = preset.id;
+      card.dataset.list = listKey;
+
+      const cardHl = (preset.hlColors && preset.hlColors[0]) || preset.hlColor || '#ffeb3b';
+      card.style.setProperty('--hl-color', cardHl);
+
+      const isBgImg = preset.bgType === 'image';
+      const bgDotColor = isBgImg ? '#64748b' : preset.bg;
+      const accent = (preset.textColors && preset.textColors[0]) || preset.textColor || preset.ink;
+
+      // 즐겨찾기 영역에서는 어느 폴더 소속인지 표시
+      const ownerFolder = folderCache.find(f => f.id === preset.folderId);
+      const folderTag = (listKey === 'fav' && ownerFolder)
+        ? ` · <span class="preset-item-folder-tag">${escapeHtml(ownerFolder.name)}</span>`
+        : '';
+
+      card.innerHTML = `
+        <div class="preset-card-actions">
+          <button type="button" class="btn-preset-action fav ${preset.favorite ? 'on' : ''}" title="${preset.favorite ? '즐겨찾기 해제' : '즐겨찾기'}">${preset.favorite ? '★' : '☆'}</button>
+          <button type="button" class="btn-preset-action export" title="파일로 내보내기">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="17 8 12 3 7 8"></polyline>
+              <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+          </button>
+          <button type="button" class="btn-preset-action del" title="삭제">✕</button>
+        </div>
+        <div class="preset-item-badge">${preset.ratio === 'auto' ? '자동 높이' : escapeHtml(preset.ratio)}</div>
+        <div class="preset-item-center">
+          <span class="preset-item-name" title="${escapeHtml(preset.name)}">${escapeHtml(preset.name)}</span>
+          <div class="preset-item-meta">
+            <span class="preset-item-dot" style="background:${bgDotColor};" title="배경: ${preset.bgType}"></span>
+            <span style="font-family:'${preset.font}', sans-serif;">${preset.font === 'Pretendard' ? '고딕' : '명조'}</span>
+            <span>·</span>
+            <span style="color:${accent}; font-weight:800;">A</span>
+          </div>
+        </div>
+        <div style="font-size:10px; color:#94a3b8; text-align:center; letter-spacing:-0.02em;">
+          ${preset.mode === 'chat' ? '💬 채팅' : '📖 일반'}${folderTag}
+        </div>
+      `;
+
+      card.addEventListener('click', (e) => {
+        if (presetDrag.suppressClick) return;
+        if (e.target.closest('.btn-preset-action')) return;
+        applyPreset(preset);
+        document.getElementById('preset-modal').style.display = 'none';
+      });
+
+      card.querySelector('.fav').addEventListener('click', async (e) => {
+        e.stopPropagation();
+        preset.favorite = !preset.favorite;
+        await dbPutMany(STORE_NAME, [preset]);
+        renderPresetList();
+      });
+
+      card.querySelector('.export').addEventListener('click', (e) => {
+        e.stopPropagation();
+        const safeName = (preset.name || '프리셋').replace(/[\\/:*?"<>|]/g, '');
+        downloadPresetJson(preset, `[윳!발췌기]_${safeName}.json`);
+      });
+
+      card.querySelector('.del').addEventListener('click', async (e) => {
+        e.stopPropagation();
+        await deletePresetFromStorage(preset.id);
+        renderPresetList();
+      });
+
+      return card;
+    }
+
+    function createFolderTile(folder, count) {
+      const tile = document.createElement('div');
+      tile.className = 'preset-folder-tile';
+      tile.dataset.kind = 'folder';
+      tile.dataset.id = folder.id;
+      tile.dataset.list = 'folders';
+
+      tile.innerHTML = `
+        <div class="preset-folder-icon">${FOLDER_SVG}</div>
+        <div class="preset-folder-info">
+          <span class="preset-folder-name" title="${escapeHtml(folder.name)}">${escapeHtml(folder.name)}</span>
+          <span class="preset-folder-count">프리셋 ${count}개</span>
+        </div>
+        <div class="preset-folder-actions">
+          <button type="button" class="btn-preset-action rename" title="이름 바꾸기">✎</button>
+          <button type="button" class="btn-preset-action del" title="폴더 삭제">✕</button>
+        </div>
+      `;
+
+      tile.addEventListener('click', (e) => {
+        if (presetDrag.suppressClick) return;
+        if (e.target.closest('.btn-preset-action')) return;
+        currentFolderId = folder.id;
+        renderPresetList();
+      });
+
+      tile.querySelector('.rename').addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const name = prompt('폴더 이름', folder.name);
+        if (name === null || !name.trim()) return;
+        folder.name = name.trim().slice(0, 20);
+        await dbPutMany(FOLDER_STORE, [folder]);
+        renderPresetList();
+      });
+
+      tile.querySelector('.del').addEventListener('click', async (e) => {
+        e.stopPropagation();
+        if (!confirm(`'${folder.name}' 폴더를 삭제할까요?\n안에 있던 프리셋은 삭제되지 않고 '전체'로 옮겨져요.`)) return;
+        const moved = presetCache.filter(p => p.folderId === folder.id);
+        moved.forEach(p => { p.folderId = null; });
+        await dbPutMany(STORE_NAME, moved);
+        await dbDelete(FOLDER_STORE, folder.id);
+        renderPresetList();
+      });
+
+      return tile;
     }
 
     async function renderPresetList() {
       const grid = document.getElementById('preset-grid');
-      const presets = await getPresetsFromStorage();
+      const [presets, folders] = await Promise.all([getPresetsFromStorage(), getFoldersFromStorage()]);
+      presetCache = presets;
+      folderCache = folders;
 
-      if (presets.length === 0) {
-        grid.innerHTML = '<div class="preset-empty">저장된 프리셋이 없습니다.<br>현재 상태를 프리셋으로 저장해보세요!</div>';
+      const folderIds = new Set(folders.map(f => f.id));
+      if (currentFolderId !== null && !folderIds.has(currentFolderId)) currentFolderId = null;
+      // 존재하지 않는 폴더를 가리키는 프리셋은 '전체' 소속으로 취급
+      const ownerOf = (p) => (p.folderId != null && folderIds.has(p.folderId)) ? p.folderId : null;
+
+      renderPresetNav();
+      grid.innerHTML = '';
+
+      if (currentFolderId === null) {
+        const favs = presets.filter(p => p.favorite);
+        const rootItems = presets.filter(p => ownerOf(p) === null && !p.favorite);
+
+        if (favs.length) {
+          addSectionLabel(grid, '★ 즐겨찾기');
+          favs.forEach(p => grid.appendChild(createPresetCard(p, 'fav')));
+        }
+        if (folders.length) {
+          addSectionLabel(grid, '폴더');
+          folders.forEach(f => grid.appendChild(createFolderTile(f, presets.filter(p => ownerOf(p) === f.id).length)));
+        }
+        if (rootItems.length) {
+          if (favs.length || folders.length) addSectionLabel(grid, '♡ 프리셋');
+          rootItems.forEach(p => grid.appendChild(createPresetCard(p, 'root')));
+        }
+        if (!presets.length && !folders.length) {
+          grid.innerHTML = '<div class="preset-empty">저장된 프리셋이 없습니다.<br>현재 상태를 프리셋으로 저장해보세요!</div>';
+        }
+      } else {
+        const items = presets.filter(p => ownerOf(p) === currentFolderId);
+        if (!items.length) {
+          grid.innerHTML = '<div class="preset-empty">폴더가 비어 있어요ㅜㅅㅜ<br>여기서 저장하거나, 전체에서 프리셋을 폴더 위로 끌어다 놓아보세요!</div>';
+        }
+        items.forEach(p => grid.appendChild(createPresetCard(p, 'folder')));
+      }
+    }
+
+    // 새 폴더 만들기
+    document.getElementById('btn-new-folder').addEventListener('click', async () => {
+      const name = prompt('새 폴더 이름을 지정해주세요!', '새 폴더');
+      if (name === null || !name.trim()) return;
+      await dbAdd(FOLDER_STORE, { name: name.trim().slice(0, 20), order: -1, createdAt: Date.now() });
+      currentFolderId = null;
+      renderPresetList();
+    });
+
+    // ==========================================
+    // 프리셋 / 폴더 드래그 정렬 (PC: 끌기 · 모바일: 길게 눌러 끌기)
+    // ==========================================
+    const presetDrag = {
+      pending: null,   // { el, x, y, isTouch, timer }
+      active: false,
+      el: null,
+      ghost: null,
+      offX: 0,
+      offY: 0,
+      lastX: 0,
+      lastY: 0,
+      target: null,    // { el, mode: 'before' | 'after' | 'into-folder' | 'into-root' }
+      raf: null,
+      suppressClick: false
+    };
+
+    const presetGridEl = document.getElementById('preset-grid');
+    const DRAG_ITEM_SELECTOR = '.preset-item-card, .preset-folder-tile';
+
+    function clearDropMarks() {
+      document.querySelectorAll('.drop-before, .drop-after, .drop-into').forEach(el => {
+        el.classList.remove('drop-before', 'drop-after', 'drop-into');
+      });
+    }
+
+    function beginPresetDrag(x, y) {
+      const el = presetDrag.pending && presetDrag.pending.el;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const ghost = el.cloneNode(true);
+      ghost.classList.add('preset-drag-ghost');
+      ghost.style.width = rect.width + 'px';
+      ghost.style.height = rect.height + 'px';
+      ghost.style.left = rect.left + 'px';
+      ghost.style.top = rect.top + 'px';
+      document.body.appendChild(ghost);
+
+      presetDrag.active = true;
+      presetDrag.el = el;
+      presetDrag.ghost = ghost;
+      presetDrag.offX = x - rect.left;
+      presetDrag.offY = y - rect.top;
+      presetDrag.lastX = x;
+      presetDrag.lastY = y;
+      el.classList.add('is-drag-source');
+      document.body.classList.add('preset-dragging');
+      if (presetDrag.pending.isTouch && navigator.vibrate) navigator.vibrate(12);
+
+      // 가장자리 자동 스크롤
+      const loop = () => {
+        if (!presetDrag.active) return;
+        const r = presetGridEl.getBoundingClientRect();
+        const edge = 48;
+        let dy = 0;
+        if (presetDrag.lastY < r.top + edge) dy = -Math.ceil((r.top + edge - presetDrag.lastY) / 5);
+        else if (presetDrag.lastY > r.bottom - edge) dy = Math.ceil((presetDrag.lastY - (r.bottom - edge)) / 5);
+        if (dy) {
+          presetGridEl.scrollTop += dy;
+          updateDropTarget(presetDrag.lastX, presetDrag.lastY);
+        }
+        presetDrag.raf = requestAnimationFrame(loop);
+      };
+      presetDrag.raf = requestAnimationFrame(loop);
+    }
+
+    function updateDropTarget(x, y) {
+      clearDropMarks();
+      presetDrag.target = null;
+      const src = presetDrag.el;
+      const under = document.elementFromPoint(x, y);
+      const t = under && under.closest(`#preset-grid .preset-item-card, #preset-grid .preset-folder-tile, #preset-nav [data-kind="root-drop"]`);
+      if (!t || t === src) return;
+
+      const srcKind = src.dataset.kind;
+      let mode = null;
+
+      if (t.dataset.kind === 'root-drop' && srcKind === 'preset') {
+        mode = 'into-root';
+      } else if (t.dataset.kind === 'folder' && srcKind === 'preset') {
+        mode = 'into-folder';
+      } else if (t.dataset.kind === srcKind && t.dataset.list === src.dataset.list) {
+        const r = t.getBoundingClientRect();
+        mode = x > r.left + r.width / 2 ? 'after' : 'before';
+      }
+
+      if (!mode) return;
+      t.classList.add(mode === 'before' ? 'drop-before' : mode === 'after' ? 'drop-after' : 'drop-into');
+      presetDrag.target = { el: t, mode };
+    }
+
+    function movePresetDrag(x, y) {
+      presetDrag.lastX = x;
+      presetDrag.lastY = y;
+      presetDrag.ghost.style.left = (x - presetDrag.offX) + 'px';
+      presetDrag.ghost.style.top = (y - presetDrag.offY) + 'px';
+      updateDropTarget(x, y);
+    }
+
+    async function endPresetDrag(commit) {
+      if (presetDrag.pending && presetDrag.pending.timer) clearTimeout(presetDrag.pending.timer);
+      presetDrag.pending = null;
+      if (!presetDrag.active) return;
+
+      cancelAnimationFrame(presetDrag.raf);
+      presetDrag.active = false;
+      if (presetDrag.ghost) presetDrag.ghost.remove();
+      presetDrag.el.classList.remove('is-drag-source');
+      document.body.classList.remove('preset-dragging');
+      clearDropMarks();
+
+      // 드래그 직후 발생하는 클릭(프리셋 적용/폴더 열기) 무시
+      presetDrag.suppressClick = true;
+      setTimeout(() => { presetDrag.suppressClick = false; }, 80);
+
+      const src = presetDrag.el;
+      const target = presetDrag.target;
+      presetDrag.el = null;
+      presetDrag.ghost = null;
+      presetDrag.target = null;
+      if (commit && target) await applyPresetDrop(src, target);
+    }
+
+    async function applyPresetDrop(src, target) {
+      const srcId = Number(src.dataset.id);
+      const isFolder = src.dataset.kind === 'folder';
+
+      if (target.mode === 'into-folder' || target.mode === 'into-root') {
+        const preset = presetCache.find(p => p.id === srcId);
+        if (!preset) return;
+        preset.folderId = target.mode === 'into-folder' ? Number(target.el.dataset.id) : null;
+        await dbPutMany(STORE_NAME, [preset]);
+        renderPresetList();
         return;
       }
 
-      grid.innerHTML = '';
-      presets.forEach((preset) => {
-        const card = document.createElement('div');
-        card.className = 'preset-item-card';
-        const cardHl = (preset.hlColors && preset.hlColors[0]) || preset.hlColor || '#ffeb3b';
-        card.style.setProperty('--hl-color', cardHl);
+      // 같은 목록 안에서 순서 바꾸기: 화면에 보이는 순서대로 재배열 후,
+      // 그 항목들이 원래 갖고 있던 order 번호들을 새 순서대로 다시 나눠 줌
+      const cache = isFolder ? folderCache : presetCache;
+      const selector = isFolder
+        ? '.preset-folder-tile'
+        : `.preset-item-card[data-list="${src.dataset.list}"]`;
+      const items = Array.from(presetGridEl.querySelectorAll(selector))
+        .map(el => cache.find(o => o.id === Number(el.dataset.id)))
+        .filter(Boolean);
 
-        const isBgImg = preset.bgType === 'image';
-        const bgDotColor = isBgImg ? '#64748b' : preset.bg;
+      const moving = items.find(o => o.id === srcId);
+      const targetObj = items.find(o => o.id === Number(target.el.dataset.id));
+      if (!moving || !targetObj) return;
 
-        // renderPresetList 함수 내부 card.innerHTML 교체
-        card.innerHTML = `
-          <div class="preset-card-actions">
-            <button type="button" class="btn-preset-action export" data-id="${preset.id}" title="파일로 내보내기">
-              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                <polyline points="17 8 12 3 7 8"></polyline>
-                <line x1="12" y1="3" x2="12" y2="15"></line>
-              </svg>
-            </button>
-            <button type="button" class="btn-preset-action del" data-id="${preset.id}" title="삭제">✕</button>
-          </div>
-          <div class="preset-item-badge">${preset.ratio}</div>
-          <div class="preset-item-center">
-            <span class="preset-item-name" title="${preset.name}">${preset.name}</span>
-            <div class="preset-item-meta">
-              <span class="preset-item-dot" style="background:${bgDotColor};" title="배경: ${preset.bgType}"></span>
-              <span style="font-family:'${preset.font}', sans-serif;">${preset.font === 'Pretendard' ? '고딕' : '명조'}</span>
-              <span>·</span>
-              <span style="color:${(preset.textColors && preset.textColors[0]) || preset.textColor || preset.ink}; font-weight:800;">A</span>
-            </div>
-          </div>
-          <div style="font-size:10px; color:#94a3b8; text-align:center; letter-spacing:-0.02em;">
-            ${preset.mode === 'chat' ? '💬 채팅' : '📖 일반'}
-          </div>
-        `;
+      const orders = items.map(o => o.order).sort((a, b) => a - b);
+      const seq = items.filter(o => o !== moving);
+      let idx = seq.indexOf(targetObj);
+      if (target.mode === 'after') idx += 1;
+      seq.splice(idx, 0, moving);
+      seq.forEach((o, i) => { o.order = orders[i]; });
 
-        card.addEventListener('click', (e) => {
-          if (e.target.closest('.btn-preset-action')) return; // 버튼 클릭 시 적용 방지
-          applyPreset(preset);
-          document.getElementById('preset-modal').style.display = 'none';
-        });
-
-        grid.appendChild(card);
-      });
-
-      // 삭제 이벤트
-      grid.querySelectorAll('.btn-preset-action.del').forEach(btn => {
-        btn.addEventListener('click', async (e) => {
-          e.stopPropagation();
-          const targetId = Number(btn.dataset.id);
-          await deletePresetFromStorage(targetId);
-          renderPresetList();
-        });
-      });
-
-      // ▼▼▼ 내보내기(Export) 이벤트 연결 ▼▼▼
-      grid.querySelectorAll('.btn-preset-action.export').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const targetId = Number(btn.dataset.id);
-          const targetPreset = presets.find(p => p.id === targetId);
-          if (targetPreset) {
-            const safeName = (targetPreset.name || '프리셋').replace(/[\\/:*?"<>|]/g, '');
-            downloadPresetJson(targetPreset, `[윳!발췌기]_${safeName}.json`);
-          }
-        });
-      });
+      await dbPutMany(isFolder ? FOLDER_STORE : STORE_NAME, seq);
+      renderPresetList();
     }
+
+    // --- 마우스 ---
+    presetGridEl.addEventListener('mousedown', (e) => {
+      if (e.button !== 0) return;
+      const item = e.target.closest(DRAG_ITEM_SELECTOR);
+      if (!item || e.target.closest('button')) return;
+      presetDrag.pending = { el: item, x: e.clientX, y: e.clientY, isTouch: false };
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (presetDrag.active) {
+        movePresetDrag(e.clientX, e.clientY);
+      } else if (presetDrag.pending && !presetDrag.pending.isTouch) {
+        const dx = e.clientX - presetDrag.pending.x;
+        const dy = e.clientY - presetDrag.pending.y;
+        if (Math.hypot(dx, dy) > 6) {
+          beginPresetDrag(presetDrag.pending.x, presetDrag.pending.y);
+          movePresetDrag(e.clientX, e.clientY);
+        }
+      }
+    });
+
+    window.addEventListener('mouseup', () => {
+      if (presetDrag.pending && !presetDrag.pending.isTouch || presetDrag.active) endPresetDrag(true);
+    });
+
+    // --- 터치 (길게 눌러서 시작) ---
+    presetGridEl.addEventListener('touchstart', (e) => {
+      if (e.touches.length !== 1) return;
+      const item = e.target.closest(DRAG_ITEM_SELECTOR);
+      if (!item || e.target.closest('button')) return;
+      const t = e.touches[0];
+      presetDrag.pending = {
+        el: item,
+        x: t.clientX,
+        y: t.clientY,
+        isTouch: true,
+        timer: setTimeout(() => {
+          if (!presetDrag.pending) return;
+          beginPresetDrag(presetDrag.pending.x, presetDrag.pending.y);
+        }, 380)
+      };
+    }, { passive: true });
+
+    window.addEventListener('touchmove', (e) => {
+      if (presetDrag.active) {
+        if (e.cancelable) e.preventDefault(); // 드래그 중엔 스크롤 막기
+        const t = e.touches[0];
+        movePresetDrag(t.clientX, t.clientY);
+      } else if (presetDrag.pending && presetDrag.pending.isTouch) {
+        const t = e.touches[0];
+        if (Math.hypot(t.clientX - presetDrag.pending.x, t.clientY - presetDrag.pending.y) > 10) {
+          clearTimeout(presetDrag.pending.timer); // 길게 누르기 전에 움직이면 일반 스크롤
+          presetDrag.pending = null;
+        }
+      }
+    }, { passive: false });
+
+    window.addEventListener('touchend', () => {
+      if (presetDrag.pending || presetDrag.active) endPresetDrag(true);
+    });
+    window.addEventListener('touchcancel', () => {
+      if (presetDrag.pending || presetDrag.active) endPresetDrag(false);
+    });
+
+    // 길게 누를 때 뜨는 메뉴 방지
+    presetGridEl.addEventListener('contextmenu', (e) => {
+      if (presetDrag.pending || presetDrag.active) e.preventDefault();
+    });
 
     // 1) 프리셋 저장: 텍스트 포함 + 원본 화질 100% 무손실 저장
     document.getElementById('btn-save-preset').addEventListener('click', async () => {
@@ -5498,24 +7571,14 @@
 
       presetData.name = name;
       presetData.createdAt = Date.now();
+      presetData.folderId = currentFolderId; // 지금 열려 있는 폴더에 저장
+      presetData.favorite = false;
+      presetData.order = -1;                  // 맨 앞에 추가
 
       try {
-        const db = await openPresetDB();
-        const tx = db.transaction(STORE_NAME, 'readwrite');
-        const store = tx.objectStore(STORE_NAME);
-
-        store.add(presetData);
-
-        tx.oncomplete = () => {
-          nameInput.value = '';
-          renderPresetList();
-        };
-
-        tx.onerror = () => {
-          console.error('프리셋 저장 실패:', tx.error);
-          alert('프리셋 저장 중 오류가 발생했습니다.');
-        };
-
+        await dbAdd(STORE_NAME, presetData);
+        nameInput.value = '';
+        renderPresetList();
       } catch (err) {
         console.error('프리셋 저장 중 오류:', err);
         alert('프리셋 저장 중 오류가 발생했습니다.');
@@ -5525,6 +7588,11 @@
     // 2) 프리셋 적용: 본문 텍스트 및 에디터 폼 완벽 동기화
     function applyPreset(preset) {
       Object.assign(state, JSON.parse(JSON.stringify(preset)));
+      // 스티커 없는 예전 프리셋이면 스티커 비우기
+      state.stickers = Array.isArray(preset.stickers) ? JSON.parse(JSON.stringify(preset.stickers)) : [];
+      resetStickerSelection();
+      state.chatImages = Array.isArray(preset.chatImages) ? JSON.parse(JSON.stringify(preset.chatImages)) : [];
+      renderChatImageList();
 
       const inText = document.getElementById('in-text');
       inText.value = state.text || '';
@@ -5607,7 +7675,7 @@
       syncGroup('font-group', 'font', state.font);
       
       // 기존 syncGroup('ratio-group', 'ratio', state.ratio); 대신:
-      document.querySelectorAll('#ratio-group button:not(#btn-ratio-expand), #ratio-extra-group button').forEach(b => {
+      document.querySelectorAll('#ratio-group button:not(#btn-ratio-expand), #ratio-extra-group button, #btn-ratio-auto').forEach(b => {
         b.classList.toggle('on', b.dataset.ratio === state.ratio);
       });
       // 만약 선택된 비율이 서브 메뉴에 속해 있다면 자동으로 서브 메뉴를 펼쳐두깅
@@ -5624,8 +7692,7 @@
       syncGroup('chat-theme-group', 'theme', state.chatTheme);
 
       document.getElementById('corner-icon-row').style.display = state.frameStyle === 'corner' ? 'flex' : 'none';
-      document.getElementById('solid-controls').style.display = state.bgType === 'solid' ? 'flex' : 'none';
-      document.getElementById('image-controls').style.display = state.bgType === 'image' ? 'flex' : 'none';
+      syncBgTypeUI();
 
       syncModeUI();
 
@@ -5682,6 +7749,9 @@
       delete exportData.id;
       delete exportData.bgImg;
       delete exportData.insertImg;
+      delete exportData.folderId;
+      delete exportData.order;
+      delete exportData.favorite;
       if (exportData.profiles) {
         exportData.profiles.forEach(p => delete p.avatarImg);
       }
@@ -5723,6 +7793,9 @@
 
           delete imported.id;
           imported.createdAt = Date.now();
+          imported.folderId = currentFolderId; // 지금 열린 폴더로 가져오기
+          imported.favorite = false;
+          imported.order = -1;
           if (!imported.name) {
             imported.name = file.name.replace('.json', '').replace('[발췌기]_', '') || '가져온 프리셋';
           }
